@@ -1,8 +1,45 @@
+Grammar specification using eBNF-like syntax:
+
+program     = declaration* EOF ;
+
+declaration = varDecl
+            | statement ;
+
+varDecl     = "var" IDENTIFIER ( "=" expression )? ";" ;
+
+statement   = assertStmt
+            | printStmt
+            | block
+            | exprStmt ;
+
+assertStmt  = "assert" expression ";" ;
+printStmt   = "print" expression ";" ;
+block       = "{" declaration* "}" ;
+exprStmt    = expression ";" ;
+
+expression  = assignment ;
+assignment  = IDENTIFIER "=" assignment
+            | ternary ;
+ternary     = equality "?" expression ":" ternary
+            | equality ;
+equality    = comparison ( ( "==" | "!=" ) comparison )* ;
+comparison  = term ( ( ">" | ">=" | "<" | "<=" ) term )* ;
+term        = factor ( ( "+" | "-" ) factor )* ;
+factor      = unary ( ( "/" | "*" ) unary )* ;
+unary       = ( "!" | "-" | "+" ) unary
+            | primary ;
+primary     = NUMBER | STRING | "true" | "false" | "nil"
+            |  "(" expression ")"
+            | IDENTIFIER ;
+
+
+Information from grammar:
 
 In increasing order of associativity:
 =======================================
 Name        |   Operator  |  Associates
 ============|=============|============
+Assignment  |   =         |  Right
 Ternary     |   ?:        |  Right
 Equality    |   == !=     |  Left
 Comparison  |  > >= < <=  |  Left
@@ -10,18 +47,3 @@ Term        |  - +        |  Left
 Factor      |  / *        |  Left
 Unary       |  ! - +      |  Right
 ---------------------------------------
-
-
-Grammar specification using eBNF-like syntax:
-
-expression = ternary ;
-ternary    = equality "?" expression ":" ternary
-           | equality ;
-equality   = comparison ( ( "==" | "!=" ) comparison )* ;
-comparison = term ( ( ">" | ">=" | "<" | "<=" ) term )* ;
-term       = factor ( ( "+" | "-" ) factor )* ;
-factor     = unary ( ( "/" | "*" ) unary )* ;
-unary      = ( "!" | "-" | "+" ) unary
-           | primary ;
-primary    = NUMBER | STRING | "true" | "false" | "nil"
-           |  "(" expression ")" ;

@@ -8,9 +8,9 @@
 #include <string_view>
 #include <utility>
 
-#include "token.hxx"
-#include "expr.hxx"
 #include "error.hxx"
+#include "token.hxx"
+#include "stmt.hxx"
 
 struct ParseError : public std::runtime_error {
 	ParseError()
@@ -27,13 +27,18 @@ public:
 	{
 	}
 
-	ExprPtr parse()
+	std::vector<StmtPtr> parse()
 	{
-		try {
-			return expression();
-		} catch (ParseError) {
-			return nullptr;
+		std::vector<StmtPtr> statements;
+		while (!is_at_end()) {
+			try {
+				statements.push_back(declaration());
+			} catch (ParseError &e) {
+				return {};
+			}
 		}
+
+		return statements;
 	}
 
 private:
@@ -85,7 +90,17 @@ private:
 
 	void synchronize();
 
+	StmtPtr declaration();
+	StmtPtr var_declaration();
+	StmtPtr statement();
+	StmtPtr assert_statement();
+	StmtPtr print_statement();
+	StmtPtr block();
+	StmtPtr expression_statement();
+	std::vector<StmtPtr> bare_block();
+
 	ExprPtr expression();
+	ExprPtr assignment();
 	ExprPtr ternary();
 	ExprPtr equality();
 	ExprPtr comparison();

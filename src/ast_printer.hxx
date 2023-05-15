@@ -7,7 +7,7 @@
 
 #include "expr.hxx"
 
-struct AstPrinter : public Visitor {
+struct AstPrinter : public ExprVisitor {
 	inline std::string print(Expr &expr)
 	{
 		return std::get<std::string>(expr.accept(*this));
@@ -22,7 +22,7 @@ struct AstPrinter : public Visitor {
 			print(*expr.expr2),
 		});
 	}
- 
+
 	VisResult visit_binary_expr(Binary &expr) override
 	{
 		return parenthesize({
@@ -50,6 +50,20 @@ struct AstPrinter : public Visitor {
 		return parenthesize({
 			std::string(expr.operat.lexeme),
 			print(*expr.right),
+		});
+	}
+
+	VisResult visit_variable_expr(Variable &expr) override
+	{
+		return "var " + std::string(expr.name.lexeme);
+	}
+
+	VisResult visit_assign_expr(Assign &expr) override
+	{
+		return parenthesize({
+			"=",
+			std::string(expr.name.lexeme),
+			print(*expr.expression),
 		});
 	}
 

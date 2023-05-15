@@ -47,6 +47,7 @@ enum class TokenType {
 	FOR,
 	OR,
 	AND,
+	ASSERT,
 	PRINT,
 	RETURN,
 	NIL,
@@ -132,6 +133,8 @@ static std::string to_string(TokenType tt)
 		return "OR";
 	case AND:
 		return "AND";
+	case ASSERT:
+		return "ASSERT";
 	case PRINT:
 		return "PRINT";
 	case RETURN:

@@ -11,17 +11,6 @@
 #include "token_type.hxx"
 #include "error.hxx"
 
-static const std::map<std::string_view, TokenType> KEYWORD_MAP = {
-	{"var", TokenType::VAR},       {"fun", TokenType::FUN},
-	{"class", TokenType::CLASS},   {"super", TokenType::SUPER},
-	{"this", TokenType::THIS},     {"if", TokenType::IF},
-	{"else", TokenType::ELSE},     {"while", TokenType::WHILE},
-	{"for", TokenType::FOR},       {"or", TokenType::OR},
-	{"and", TokenType::AND},       {"print", TokenType::PRINT},
-	{"return", TokenType::RETURN}, {"nil", TokenType::NIL},
-	{"true", TokenType::TRUE},     {"false", TokenType::FALSE},
-};
-
 class Scanner
 {
 public:

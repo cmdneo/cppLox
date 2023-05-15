@@ -5,6 +5,7 @@
 #include <string>
 #include <string_view>
 #include <vector>
+#include <utility>
 
 #include "error.hxx"
 #include "ast_printer.hxx"
@@ -25,13 +26,19 @@ void run_lox_interpreter(string_view source)
 	Scanner scanner(source);
 	Parser parser(scanner.scan_tokens());
 
-	auto expr = parser.parse();
+	auto statements = parser.parse();
 
 	if (lox_had_error)
 		return;
 
-	interpreter.interpret(*expr);
+	interpreter.interpret(std::move(statements));
 }
+
+// bool is_expression_only(string_view line)
+// {
+// 	Scanner scanner(line);
+// 	auto tokens = scanner.scan_tokens();
+// }
 
 void run_prompt()
 {
@@ -39,6 +46,10 @@ void run_prompt()
 		cout << "> ";
 		if (!std::getline(std::cin, line))
 			break;
+
+		// TODO
+		// If the user enters an expression then try to make that an
+		// expression statement and execute that, then print it's result
 
 		run_lox_interpreter(line);
 		lox_had_error = false;

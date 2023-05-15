@@ -8,28 +8,48 @@
 #include "token.hxx"
 
 struct Expr;
+struct Assign;
 struct Ternary;
 struct Binary;
 struct Grouping;
 struct Literal;
 struct Unary;
+struct Variable;
 
 // C++ does not support virtual member templates so use this variant HACK
 // to represent all the types returned by visitors
 using VisResult = std::variant<std::string, Primitive>;
 using ExprPtr = std::unique_ptr<Expr>;
 
-struct Visitor {
+struct ExprVisitor {
+	virtual VisResult visit_assign_expr(Assign &expr) = 0;
 	virtual VisResult visit_ternary_expr(Ternary &expr) = 0;
 	virtual VisResult visit_binary_expr(Binary &expr) = 0;
 	virtual VisResult visit_grouping_expr(Grouping &expr) = 0;
 	virtual VisResult visit_literal_expr(Literal &expr) = 0;
 	virtual VisResult visit_unary_expr(Unary &expr) = 0;
+	virtual VisResult visit_variable_expr(Variable &expr) = 0;
 };
 
 struct Expr {
-	virtual VisResult accept(Visitor &visitor) = 0;
+	virtual VisResult accept(ExprVisitor &visitor) = 0;
 	virtual ~Expr() = default;
+};
+
+struct Assign : public Expr {
+	Assign(Token name_, ExprPtr expression_)
+		: name(name_)
+		, expression(std::move(expression_))
+	{
+	}
+
+	VisResult accept(ExprVisitor &visitor) override
+	{
+		return visitor.visit_assign_expr(*this);
+	}
+
+	Token name;
+	ExprPtr expression;
 };
 
 struct Ternary : public Expr {
@@ -40,7 +60,7 @@ struct Ternary : public Expr {
 	{
 	}
 
-	VisResult accept(Visitor &visitor) override
+	VisResult accept(ExprVisitor &visitor) override
 	{
 		return visitor.visit_ternary_expr(*this);
 	}
@@ -51,37 +71,35 @@ struct Ternary : public Expr {
 };
 
 struct Binary : public Expr {
-	Binary(
-		std::unique_ptr<Expr> left_, Token operat_, std::unique_ptr<Expr> right_
-	)
+	Binary(ExprPtr left_, Token operat_, ExprPtr right_)
 		: left(std::move(left_))
 		, operat(operat_)
 		, right(std::move(right_))
 	{
 	}
 
-	VisResult accept(Visitor &visitor) override
+	VisResult accept(ExprVisitor &visitor) override
 	{
 		return visitor.visit_binary_expr(*this);
 	}
 
-	const std::unique_ptr<Expr> left;
+	const ExprPtr left;
 	const Token operat;
-	const std::unique_ptr<Expr> right;
+	const ExprPtr right;
 };
 
 struct Grouping : public Expr {
-	Grouping(std::unique_ptr<Expr> expression_)
+	Grouping(ExprPtr expression_)
 		: expression(std::move(expression_))
 	{
 	}
 
-	VisResult accept(Visitor &visitor) override
+	VisResult accept(ExprVisitor &visitor) override
 	{
 		return visitor.visit_grouping_expr(*this);
 	}
 
-	const std::unique_ptr<Expr> expression;
+	const ExprPtr expression;
 };
 
 struct Literal : public Expr {
@@ -90,7 +108,7 @@ struct Literal : public Expr {
 	{
 	}
 
-	VisResult accept(Visitor &visitor) override
+	VisResult accept(ExprVisitor &visitor) override
 	{
 		return visitor.visit_literal_expr(*this);
 	}
@@ -99,19 +117,33 @@ struct Literal : public Expr {
 };
 
 struct Unary : public Expr {
-	Unary(Token operat_, std::unique_ptr<Expr> right_)
+	Unary(Token operat_, ExprPtr right_)
 		: operat(operat_)
 		, right(std::move(right_))
 	{
 	}
 
-	VisResult accept(Visitor &visitor) override
+	VisResult accept(ExprVisitor &visitor) override
 	{
 		return visitor.visit_unary_expr(*this);
 	}
 
 	const Token operat;
-	const std::unique_ptr<Expr> right;
+	const ExprPtr right;
+};
+
+struct Variable : public Expr {
+	Variable(Token name_)
+		: name(name_)
+	{
+	}
+
+	VisResult accept(ExprVisitor &visitor) override
+	{
+		return visitor.visit_variable_expr(*this);
+	}
+
+	Token name;
 };
 
 #endif

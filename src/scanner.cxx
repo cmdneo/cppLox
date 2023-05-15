@@ -5,13 +5,23 @@
 #include "scanner.hxx"
 #include "token_type.hxx"
 
+using enum TokenType;
+
+static const std::map<std::string_view, TokenType> KEYWORD_MAP = {
+	{"var", VAR},     {"fun", FUN},       {"class", CLASS}, {"super", SUPER},
+	{"this", THIS},   {"if", IF},         {"else", ELSE},   {"while", WHILE},
+	{"for", FOR},     {"or", OR},         {"and", AND},     {"assert", ASSERT},
+	{"print", PRINT}, {"return", RETURN}, {"nil", NIL},     {"true", TRUE},
+	{"false", FALSE},
+};
+
 void Scanner::do_identifier()
 {
 	while (std::isalnum(peek()) || peek() == '_')
 		advance();
 
 	auto text = source.substr(start, current - start);
-	auto type = TokenType::IDENTIFIER;
+	auto type = IDENTIFIER;
 	if (auto res = KEYWORD_MAP.find(text); res != KEYWORD_MAP.end())
 		type = res->second;
 
@@ -33,7 +43,7 @@ void Scanner::do_number()
 	double result = 0.0;
 
 	std::from_chars(num_text.cbegin(), num_text.cend(), result);
-	add_token(TokenType::NUMBER, result);
+	add_token(NUMBER, result);
 }
 
 void Scanner::do_string()
@@ -48,12 +58,11 @@ void Scanner::do_string()
 
 	// Remove the quotes
 	auto text = source.substr(start + 1, current - start - 2);
-	add_token(TokenType::STRING, std::string(text));
+	add_token(STRING, std::string(text));
 }
 
 void Scanner::scan_token()
 {
-	using enum TokenType;
 
 	char c = advance();
 	switch (c) {
@@ -146,7 +155,7 @@ std::vector<Token> Scanner::scan_tokens()
 		scan_token();
 	}
 
-	tokens.emplace_back(TokenType::END_OF_FILE, "", Primitive(), line);
+	tokens.emplace_back(END_OF_FILE, "", Primitive(), line);
 	return tokens;
 	// return std::move(tokens);
 }
