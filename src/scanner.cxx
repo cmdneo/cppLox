@@ -1,4 +1,5 @@
 #include <cctype>
+#include <charconv>
 #include <format>
 #include <vector>
 #include <string>
@@ -125,7 +126,6 @@ void Scanner::scan_token()
 		if (match('/')) {
 			while (peek() != '\n' && !is_at_end())
 				advance();
-			add_token(COMMENT);
 		} else {
 			add_token(SLASH);
 		}

@@ -173,7 +173,7 @@ StmtPtr Parser::if_statement()
 	consume(RIGHT_PAREN, "Expect ')' after condition.");
 
 	auto then_branch = statement();
-	auto else_branch = match({ELSE}) ? nullptr : statement();
+	auto else_branch = match({ELSE}) ? statement() : nullptr;
 
 	return make_unique<If>(
 		std::move(condition), std::move(then_branch), std::move(else_branch)

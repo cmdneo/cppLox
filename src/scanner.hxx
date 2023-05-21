@@ -2,10 +2,10 @@
 #define SCANNER_HXX_INCLUDED
 
 #include <cstddef>
+#include <map>
+#include <string>
 #include <string_view>
 #include <vector>
-#include <map>
-#include <charconv>
 
 #include "object.hxx"
 #include "token.hxx"
@@ -46,7 +46,7 @@ private:
 	void add_token(TokenType type, Object literal = Object())
 	{
 		auto lexeme = source.substr(start, current - start);
-		tokens.emplace_back(type, lexeme, literal, line);
+		tokens.emplace_back(type, std::string(lexeme), literal, line);
 	}
 
 	bool match(char expected)

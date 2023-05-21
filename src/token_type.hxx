@@ -56,7 +56,6 @@ enum class TokenType {
 	TRUE,
 	FALSE,
 
-	COMMENT,
 	END_OF_FILE,
 };
 
@@ -151,8 +150,6 @@ static std::string to_string(TokenType tt)
 		return "TRUE";
 	case FALSE:
 		return "FALSE";
-	case COMMENT:
-		return "COMMENT";
 	case END_OF_FILE:
 		return "END_OF_FILE";
 	}
