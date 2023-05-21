@@ -4,6 +4,7 @@
 #include <string>
 #include <string_view>
 #include <iostream>
+#include <format>
 
 #include "token.hxx"
 #include "token_type.hxx"
@@ -18,8 +19,7 @@ print_error(int line, std::string_view message, std::string_view where = "")
 {
 	lox_had_error = true;
 
-	std::cout << "[line " << line << "] Error " << where << ": " << message
-			  << '\n';
+	std::cout << std::format("[line {}] Error {}: {}\n", line, where, message);
 }
 
 [[maybe_unused]] static void print_error(Token token, std::string_view message)
@@ -29,16 +29,19 @@ print_error(int line, std::string_view message, std::string_view where = "")
 	if (token.type == TokenType::END_OF_FILE) {
 		print_error(token.line, message, "at end");
 	} else {
-		print_error(
-			token.line, message,
-			std::string("at '") + std::string(token.lexeme) + "'"
-		);
+		print_error(token.line, message, std::format("at '{}'", token.lexeme));
 	}
 }
 
 [[maybe_unused]] static void print_runtime_error(const RuntimeError &err)
 {
-	std::cout << err.what() << "\n[line " << err.token.line << "]\n";
+	std::cout << std::format("{}\n[line {}]\n", err.what(), err.token.line);
+	lox_had_runtime_error = true;
+}
+
+[[maybe_unused]] static void print_nativefn_error(const NativeFnError &err)
+{
+	std::cout << std::format("Error in native function: {}\n", err.what());
 	lox_had_runtime_error = true;
 }
 

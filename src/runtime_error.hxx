@@ -6,6 +6,7 @@
 
 #include "token.hxx"
 
+// Exception class for runtime error in lox script
 struct RuntimeError : public std::runtime_error {
 	RuntimeError(const Token &token_, const std::string &message)
 		: runtime_error(message)
@@ -14,6 +15,15 @@ struct RuntimeError : public std::runtime_error {
 	}
 
 	const Token token;
+};
+
+// Exception class for runtime error in native(built-in) functions
+// due to their wrong usage from the lox script
+struct NativeFnError : public std::runtime_error {
+	NativeFnError(const std::string &message)
+		: runtime_error(message)
+	{
+	}
 };
 
 #endif

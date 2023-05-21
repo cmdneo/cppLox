@@ -7,6 +7,7 @@
 #include <map>
 #include <charconv>
 
+#include "object.hxx"
 #include "token.hxx"
 #include "token_type.hxx"
 #include "error.hxx"
@@ -42,7 +43,7 @@ private:
 		return source[current++];
 	}
 
-	void add_token(TokenType type, Primitive literal = Primitive())
+	void add_token(TokenType type, Object literal = Object())
 	{
 		auto lexeme = source.substr(start, current - start);
 		tokens.emplace_back(type, lexeme, literal, line);

@@ -50,6 +50,8 @@ enum class TokenType {
 	ASSERT,
 	PRINT,
 	RETURN,
+	BREAK,
+	CONTINUE,
 	NIL,
 	TRUE,
 	FALSE,
@@ -139,6 +141,10 @@ static std::string to_string(TokenType tt)
 		return "PRINT";
 	case RETURN:
 		return "RETURN";
+	case BREAK:
+		return "BREAK";
+	case CONTINUE:
+		return "CONTINUE";
 	case NIL:
 		return "NIL";
 	case TRUE:

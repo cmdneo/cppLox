@@ -1,17 +1,24 @@
 #include <cctype>
+#include <format>
 #include <vector>
 #include <string>
 
+#include "object.hxx"
 #include "scanner.hxx"
 #include "token_type.hxx"
 
 using enum TokenType;
 
 static const std::map<std::string_view, TokenType> KEYWORD_MAP = {
-	{"var", VAR},     {"fun", FUN},       {"class", CLASS}, {"super", SUPER},
-	{"this", THIS},   {"if", IF},         {"else", ELSE},   {"while", WHILE},
-	{"for", FOR},     {"or", OR},         {"and", AND},     {"assert", ASSERT},
-	{"print", PRINT}, {"return", RETURN}, {"nil", NIL},     {"true", TRUE},
+	{"var", VAR},     {"fun", FUN},
+	{"class", CLASS}, {"super", SUPER},
+	{"this", THIS},   {"if", IF},
+	{"else", ELSE},   {"while", WHILE},
+	{"for", FOR},     {"or", OR},
+	{"and", AND},     {"assert", ASSERT},
+	{"print", PRINT}, {"return", RETURN},
+	{"break", BREAK}, {"continue", CONTINUE},
+	{"nil", NIL},     {"true", TRUE},
 	{"false", FALSE},
 };
 
@@ -141,7 +148,7 @@ void Scanner::scan_token()
 		else if (std::isalpha(c) || c == '_')
 			do_identifier();
 		else
-			print_error(line, std::string("Unexpected character '") + c + "'.");
+			print_error(line, std::format("Unexpected character '{}'.", c));
 
 		break;
 	}
@@ -155,7 +162,7 @@ std::vector<Token> Scanner::scan_tokens()
 		scan_token();
 	}
 
-	tokens.emplace_back(END_OF_FILE, "", Primitive(), line);
+	tokens.emplace_back(END_OF_FILE, "", Object(), line);
 	return tokens;
 	// return std::move(tokens);
 }

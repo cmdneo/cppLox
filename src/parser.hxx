@@ -27,27 +27,9 @@ public:
 	{
 	}
 
-	std::vector<StmtPtr> parse()
-	{
-		std::vector<StmtPtr> statements;
-		while (!is_at_end()) {
-			try {
-				statements.push_back(declaration());
-			} catch (ParseError &e) {
-				return {};
-			}
-		}
-
-		return statements;
-	}
+	std::vector<StmtPtr> parse();
 
 private:
-	ParseError make_error(Token token, std::string_view message) const
-	{
-		print_error(token, message);
-		return ParseError();
-	}
-
 	Token peek() const { return tokens[current]; }
 
 	Token previous() const { return tokens[current - 1]; }
@@ -68,6 +50,12 @@ private:
 		return previous();
 	}
 
+	ParseError make_error(Token token, std::string_view message) const
+	{
+		print_error(token, message);
+		return ParseError();
+	}
+
 	bool match(std::initializer_list<TokenType> types)
 	{
 		for (auto t : types) {
@@ -83,34 +71,46 @@ private:
 	{
 		if (check(type))
 			return advance();
-
-		// Oh, NO! We are using C++ exceptions. What have we done :()
 		throw make_error(peek(), message);
 	}
 
 	void synchronize();
 
 	StmtPtr declaration();
+	StmtPtr function(std::string_view kind);
 	StmtPtr var_declaration();
 	StmtPtr statement();
 	StmtPtr assert_statement();
 	StmtPtr print_statement();
+	StmtPtr break_statement();
+	StmtPtr continue_statement();
+	StmtPtr if_statement();
+	StmtPtr while_statement();
+	StmtPtr for_statement();
 	StmtPtr block();
 	StmtPtr expression_statement();
+	// Statement parsing helpers
 	std::vector<StmtPtr> bare_block();
 
 	ExprPtr expression();
 	ExprPtr assignment();
 	ExprPtr ternary();
+	ExprPtr logic_or();
+	ExprPtr logic_and();
 	ExprPtr equality();
 	ExprPtr comparison();
 	ExprPtr term();
 	ExprPtr factor();
 	ExprPtr unary();
+	ExprPtr call();
 	ExprPtr primary();
+	// Expression parsing helpers
+	ExprPtr finish_call(ExprPtr callee);
 
 	const std::vector<Token> tokens;
 	std::vector<Token>::size_type current = 0;
+	// Counts inside how many loops we are in currently
+	int loop_depth = 0;
 };
 
 #endif

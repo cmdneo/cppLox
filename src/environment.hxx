@@ -1,12 +1,13 @@
 #ifndef ENVIRONMENT_HXX_INCLUDED
 #define ENVIRONMENT_HXX_INCLUDED
 
+#include <format>
 #include <map>
 #include <memory>
 #include <string>
-#include <string_view>
 
 #include "runtime_error.hxx"
+#include "object.hxx"
 #include "token.hxx"
 
 class Environment;
@@ -20,12 +21,12 @@ public:
 	{
 	}
 
-	void define(std::string_view name, const Primitive &value)
+	void define(const std::string &name, const Object &value)
 	{
 		values[std::string(name)] = value;
 	}
 
-	void assign(const Token &name, const Primitive &value)
+	void assign(const Token &name, const Object &value)
 	{
 		auto result = values.find(std::string(name.lexeme));
 		if (result != values.end()) {
@@ -39,11 +40,11 @@ public:
 		}
 
 		throw RuntimeError(
-			name, "Undefined variable '" + std::string(name.lexeme) + "'."
+			name, std::format("Undefined variable '{}'.", name.lexeme)
 		);
 	}
 
-	Primitive &get(const Token &name)
+	Object &get(const Token &name)
 	{
 		auto result = values.find(std::string(name.lexeme));
 		if (result != values.end())
@@ -53,14 +54,12 @@ public:
 			return encolsing->get(name);
 
 		throw RuntimeError(
-			name, "Undefined variable '" + std::string(name.lexeme) + "'."
+			name, std::format("Undefined variable '{}'.", name.lexeme)
 		);
 	}
 
 private:
-	// NOT using string_view as when in REPL mode each line string
-	// gets destroyed once after it is executed.
-	std::map<const std::string, Primitive> values;
+	std::map<const std::string, Object> values;
 	EnvironmentPtr encolsing;
 };
 

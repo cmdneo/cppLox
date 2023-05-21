@@ -5,6 +5,7 @@
 #include <string>
 #include <variant>
 
+#include "object.hxx"
 #include "expr.hxx"
 
 struct AstPrinter : public ExprVisitor {
@@ -13,7 +14,9 @@ struct AstPrinter : public ExprVisitor {
 		return std::get<std::string>(expr.accept(*this));
 	}
 
-	VisResult visit_ternary_expr(Ternary &expr) override
+	// Just use the std::string of the Object variant to store the result
+
+	Object visit_ternary_expr(const Ternary &expr) override
 	{
 		return parenthesize({
 			"?:",
@@ -23,7 +26,7 @@ struct AstPrinter : public ExprVisitor {
 		});
 	}
 
-	VisResult visit_binary_expr(Binary &expr) override
+	Object visit_binary_expr(const Binary &expr) override
 	{
 		return parenthesize({
 			std::string(expr.operat.lexeme),
@@ -32,7 +35,22 @@ struct AstPrinter : public ExprVisitor {
 		});
 	}
 
-	VisResult visit_grouping_expr(Grouping &expr) override
+	Object visit_call_expr(const Call &expr) override
+	{
+		std::string args;
+		for (auto &arg : expr.arguments)
+			args += print(*arg) + " ";
+		// Remove trailing space
+		args = args.substr(0, args.size() - 1);
+
+		return parenthesize({
+			"()",
+			print(*expr.callee) + ":",
+			args,
+		});
+	}
+
+	Object visit_grouping_expr(const Grouping &expr) override
 	{
 		return parenthesize({
 			"group",
@@ -40,12 +58,12 @@ struct AstPrinter : public ExprVisitor {
 		});
 	}
 
-	VisResult visit_literal_expr(Literal &expr) override
+	Object visit_literal_expr(const Literal &expr) override
 	{
 		return to_string(expr.value);
 	}
 
-	VisResult visit_unary_expr(Unary &expr) override
+	Object visit_unary_expr(const Unary &expr) override
 	{
 		return parenthesize({
 			std::string(expr.operat.lexeme),
@@ -53,12 +71,12 @@ struct AstPrinter : public ExprVisitor {
 		});
 	}
 
-	VisResult visit_variable_expr(Variable &expr) override
+	Object visit_variable_expr(const Variable &expr) override
 	{
 		return "var " + std::string(expr.name.lexeme);
 	}
 
-	VisResult visit_assign_expr(Assign &expr) override
+	Object visit_assign_expr(const Assign &expr) override
 	{
 		return parenthesize({
 			"=",

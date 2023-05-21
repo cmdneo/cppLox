@@ -4,35 +4,39 @@
 #include <memory>
 #include <utility>
 #include <variant>
+#include <vector>
 
+#include "object.hxx"
 #include "token.hxx"
 
 struct Expr;
 struct Assign;
 struct Ternary;
+struct Logical;
 struct Binary;
+struct Call;
 struct Grouping;
 struct Literal;
 struct Unary;
 struct Variable;
 
-// C++ does not support virtual member templates so use this variant HACK
-// to represent all the types returned by visitors
-using VisResult = std::variant<std::string, Primitive>;
 using ExprPtr = std::unique_ptr<Expr>;
 
 struct ExprVisitor {
-	virtual VisResult visit_assign_expr(Assign &expr) = 0;
-	virtual VisResult visit_ternary_expr(Ternary &expr) = 0;
-	virtual VisResult visit_binary_expr(Binary &expr) = 0;
-	virtual VisResult visit_grouping_expr(Grouping &expr) = 0;
-	virtual VisResult visit_literal_expr(Literal &expr) = 0;
-	virtual VisResult visit_unary_expr(Unary &expr) = 0;
-	virtual VisResult visit_variable_expr(Variable &expr) = 0;
+	virtual Object visit_assign_expr(const Assign &expr) = 0;
+	virtual Object visit_ternary_expr(const Ternary &expr) = 0;
+	virtual Object visit_logical_expr(const Logical &expr) = 0;
+	virtual Object visit_binary_expr(const Binary &expr) = 0;
+	virtual Object visit_call_expr(const Call &expr) = 0;
+	virtual Object visit_grouping_expr(const Grouping &expr) = 0;
+	virtual Object visit_literal_expr(const Literal &expr) = 0;
+	virtual Object visit_unary_expr(const Unary &expr) = 0;
+	virtual Object visit_variable_expr(const Variable &expr) = 0;
+	virtual ~ExprVisitor() = default;
 };
 
 struct Expr {
-	virtual VisResult accept(ExprVisitor &visitor) = 0;
+	virtual Object accept(ExprVisitor &visitor) = 0;
 	virtual ~Expr() = default;
 };
 
@@ -43,7 +47,7 @@ struct Assign : public Expr {
 	{
 	}
 
-	VisResult accept(ExprVisitor &visitor) override
+	Object accept(ExprVisitor &visitor) override
 	{
 		return visitor.visit_assign_expr(*this);
 	}
@@ -60,7 +64,7 @@ struct Ternary : public Expr {
 	{
 	}
 
-	VisResult accept(ExprVisitor &visitor) override
+	Object accept(ExprVisitor &visitor) override
 	{
 		return visitor.visit_ternary_expr(*this);
 	}
@@ -68,6 +72,24 @@ struct Ternary : public Expr {
 	const ExprPtr condition;
 	const ExprPtr expr1;
 	const ExprPtr expr2;
+};
+
+struct Logical : public Expr {
+	Logical(ExprPtr left_, Token operat_, ExprPtr right_)
+		: left(std::move(left_))
+		, operat(operat_)
+		, right(std::move(right_))
+	{
+	}
+
+	Object accept(ExprVisitor &visitor) override
+	{
+		return visitor.visit_logical_expr(*this);
+	}
+
+	ExprPtr left;
+	Token operat;
+	ExprPtr right;
 };
 
 struct Binary : public Expr {
@@ -78,7 +100,7 @@ struct Binary : public Expr {
 	{
 	}
 
-	VisResult accept(ExprVisitor &visitor) override
+	Object accept(ExprVisitor &visitor) override
 	{
 		return visitor.visit_binary_expr(*this);
 	}
@@ -88,13 +110,31 @@ struct Binary : public Expr {
 	const ExprPtr right;
 };
 
+struct Call : public Expr {
+	Call(ExprPtr callee_, Token paren_, std::vector<ExprPtr> arguments_)
+		: callee(std::move(callee_))
+		, paren(paren_)
+		, arguments(std::move(arguments_))
+	{
+	}
+
+	Object accept(ExprVisitor &visitor)
+	{
+		return visitor.visit_call_expr(*this);
+	}
+
+	ExprPtr callee;
+	Token paren;
+	std::vector<ExprPtr> arguments;
+};
+
 struct Grouping : public Expr {
 	Grouping(ExprPtr expression_)
 		: expression(std::move(expression_))
 	{
 	}
 
-	VisResult accept(ExprVisitor &visitor) override
+	Object accept(ExprVisitor &visitor) override
 	{
 		return visitor.visit_grouping_expr(*this);
 	}
@@ -103,17 +143,17 @@ struct Grouping : public Expr {
 };
 
 struct Literal : public Expr {
-	Literal(Primitive value_)
+	Literal(Object value_)
 		: value(value_)
 	{
 	}
 
-	VisResult accept(ExprVisitor &visitor) override
+	Object accept(ExprVisitor &visitor) override
 	{
 		return visitor.visit_literal_expr(*this);
 	}
 
-	const Primitive value;
+	const Object value;
 };
 
 struct Unary : public Expr {
@@ -123,7 +163,7 @@ struct Unary : public Expr {
 	{
 	}
 
-	VisResult accept(ExprVisitor &visitor) override
+	Object accept(ExprVisitor &visitor) override
 	{
 		return visitor.visit_unary_expr(*this);
 	}
@@ -138,7 +178,7 @@ struct Variable : public Expr {
 	{
 	}
 
-	VisResult accept(ExprVisitor &visitor) override
+	Object accept(ExprVisitor &visitor) override
 	{
 		return visitor.visit_variable_expr(*this);
 	}

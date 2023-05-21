@@ -1,7 +1,9 @@
 #include <cassert>
+#include <format>
 #include <memory>
 #include <vector>
 #include <utility>
+#include <string_view>
 #include <typeinfo>
 #include <initializer_list>
 
@@ -11,24 +13,45 @@
 #include "parser.hxx"
 
 using enum TokenType;
+using std::format;
 using std::make_unique;
+using std::vector;
+
+constexpr unsigned MAX_PARAMS = 255;
 
 // CodeGen macro for parsing binary expressions
-#define BINARY_EXPR(next_rule_method, ...)                 \
-	{                                                      \
-		using TypeList = std::initializer_list<TokenType>; \
-		auto expr = next_rule_method();                    \
-                                                           \
-		while (match(TypeList{__VA_ARGS__})) {             \
-			auto op = previous();                          \
-			auto right = next_rule_method();               \
-			expr = std::make_unique<Binary>(               \
-				std::move(expr), op, std::move(right)      \
-			);                                             \
-		}                                                  \
-                                                           \
-		return expr;                                       \
+#define RETURN_BINARY_EXPR(expr_type, next_rule_method, ...) \
+	do {                                                     \
+		using TypeList = std::initializer_list<TokenType>;   \
+		auto expr = next_rule_method();                      \
+                                                             \
+		while (match(TypeList{__VA_ARGS__})) {               \
+			auto operat = previous();                        \
+			auto right = next_rule_method();                 \
+			expr = std::make_unique<expr_type>(              \
+				std::move(expr), operat, std::move(right)    \
+			);                                               \
+		}                                                    \
+                                                             \
+		return expr;                                         \
+	} while (0)
+
+// Parser interface method
+//---------------------------------------------------------
+
+std::vector<StmtPtr> Parser::parse()
+{
+	vector<StmtPtr> statements;
+	while (!is_at_end()) {
+		try {
+			statements.push_back(declaration());
+		} catch (ParseError &e) {
+			return {};
+		}
 	}
+
+	return statements;
+}
 
 // Statement parsing
 //---------------------------------------------------------
@@ -36,6 +59,8 @@ using std::make_unique;
 StmtPtr Parser::declaration()
 {
 	try {
+		if (match({FUN}))
+			return function("function");
 		if (match({VAR}))
 			return var_declaration();
 		return statement();
@@ -45,6 +70,32 @@ StmtPtr Parser::declaration()
 	}
 
 	assert(!"Unreachable code");
+}
+
+StmtPtr Parser::function(std::string_view kind)
+{
+	auto name = consume(IDENTIFIER, format("Expect {} name.", kind));
+	consume(LEFT_PAREN, format("Expect '(' after {} name.", kind));
+
+	vector<Token> parameters;
+	if (!check(RIGHT_PAREN)) {
+		do {
+			if (parameters.size() >= MAX_PARAMS) {
+				print_error(
+					peek(),
+					format("Can't have more than {} parameters.", MAX_PARAMS)
+				);
+			}
+			auto param = consume(IDENTIFIER, "Expect parameter name.");
+			parameters.push_back(param);
+		} while (match({COMMA}));
+	}
+	consume(RIGHT_PAREN, "Expect ')' after parameters.");
+
+	consume(LEFT_BRACE, format("Expect '{{' before {} body.", kind));
+	auto body = std::make_shared<std::vector<StmtPtr>>(bare_block());
+
+	return make_unique<Function>(name, parameters, body);
 }
 
 StmtPtr Parser::var_declaration()
@@ -67,6 +118,16 @@ StmtPtr Parser::statement()
 		return assert_statement();
 	if (match({PRINT}))
 		return print_statement();
+	if (match({BREAK}))
+		return break_statement();
+	if (match({CONTINUE}))
+		return continue_statement();
+	if (match({IF}))
+		return if_statement();
+	if (match({WHILE}))
+		return while_statement();
+	if (match({FOR}))
+		return for_statement();
 	if (match({LEFT_BRACE}))
 		return block();
 
@@ -87,6 +148,93 @@ StmtPtr Parser::print_statement()
 	return make_unique<Print>(std::move(expr));
 }
 
+StmtPtr Parser::break_statement()
+{
+	consume(SEMICOLON, "Expect ';' after 'break'.");
+	if (loop_depth == 0)
+		throw make_error(previous(), "'break' statement outside loop.");
+
+	return make_unique<Break>();
+}
+
+StmtPtr Parser::continue_statement()
+{
+	consume(SEMICOLON, "Expect ';' after 'continue'.");
+	if (loop_depth == 0)
+		throw make_error(previous(), "'continue' statement outside loop.");
+
+	return make_unique<Continue>();
+}
+
+StmtPtr Parser::if_statement()
+{
+	consume(LEFT_PAREN, "Expect '(' after if.");
+	auto condition = expression();
+	consume(RIGHT_PAREN, "Expect ')' after condition.");
+
+	auto then_branch = statement();
+	auto else_branch = match({ELSE}) ? nullptr : statement();
+
+	return make_unique<If>(
+		std::move(condition), std::move(then_branch), std::move(else_branch)
+	);
+}
+
+StmtPtr Parser::while_statement()
+{
+	consume(LEFT_PAREN, "Expect '(' after 'while'.");
+	auto condition = expression();
+	consume(RIGHT_PAREN, "Expect ')' after condition.");
+
+	loop_depth++;
+	auto body = statement();
+	loop_depth--;
+
+	return make_unique<While>(std::move(condition), std::move(body));
+}
+
+StmtPtr Parser::for_statement()
+{
+	consume(LEFT_PAREN, "Expect '(' after 'for'.");
+	StmtPtr initializer;
+	if (match({SEMICOLON}))
+		initializer = nullptr;
+	else if (match({VAR}))
+		initializer = var_declaration();
+	else
+		initializer = expression_statement();
+
+	ExprPtr condition = nullptr;
+	if (!check(SEMICOLON))
+		condition = expression();
+	consume(SEMICOLON, "Expect ';' after loop condition.");
+
+	ExprPtr increment = nullptr;
+	if (!check(RIGHT_PAREN))
+		increment = expression();
+	consume(RIGHT_PAREN, "Expect ')' after for clauses.");
+	auto body = statement();
+
+	// A 'for' loop is just a syntactic sugar for the while loop.
+	// The below two are equaivalent:
+	//	for (initializer; condition; increment) { body }
+	//	{ initializer; while (condition) { { body } increment; } }
+	// So, convert the for loop to a while loop as per the above equivalence.
+	if (increment != nullptr)
+		body = make_block(
+			std::move(body), make_unique<Expression>(std::move(increment))
+		);
+
+	if (condition == nullptr)
+		condition = make_unique<Literal>(true);
+	body = make_unique<While>(std::move(condition), std::move(body));
+
+	if (initializer != nullptr)
+		body = make_block(std::move(initializer), std::move(body));
+
+	return body;
+}
+
 StmtPtr Parser::block() { return make_unique<Block>(bare_block()); }
 
 StmtPtr Parser::expression_statement()
@@ -98,7 +246,7 @@ StmtPtr Parser::expression_statement()
 
 std::vector<StmtPtr> Parser::bare_block()
 {
-	std::vector<StmtPtr> statements;
+	vector<StmtPtr> statements;
 
 	while (!check(RIGHT_BRACE) && !is_at_end())
 		statements.push_back(declaration());
@@ -133,7 +281,7 @@ ExprPtr Parser::assignment()
 
 ExprPtr Parser::ternary()
 {
-	auto expr = equality();
+	auto expr = logic_or();
 
 	while (match({QUESTION})) {
 		auto expr1 = expression();
@@ -147,16 +295,23 @@ ExprPtr Parser::ternary()
 	return expr;
 }
 
-ExprPtr Parser::equality() { BINARY_EXPR(comparison, EQUAL_EQUAL, BANG_EQUAL); }
+ExprPtr Parser::logic_or() { RETURN_BINARY_EXPR(Logical, logic_and, OR); }
+
+ExprPtr Parser::logic_and() { RETURN_BINARY_EXPR(Logical, equality, AND); }
+
+ExprPtr Parser::equality()
+{
+	RETURN_BINARY_EXPR(Binary, comparison, EQUAL_EQUAL, BANG_EQUAL);
+}
 
 ExprPtr Parser::comparison()
 {
-	BINARY_EXPR(term, GREATER, GREATER_EQUAL, LESS, LESS_EQUAL);
+	RETURN_BINARY_EXPR(Binary, term, GREATER, GREATER_EQUAL, LESS, LESS_EQUAL);
 }
 
-ExprPtr Parser::term() { BINARY_EXPR(factor, PLUS, MINUS); }
+ExprPtr Parser::term() { RETURN_BINARY_EXPR(Binary, factor, PLUS, MINUS); }
 
-ExprPtr Parser::factor() { BINARY_EXPR(unary, SLASH, STAR); }
+ExprPtr Parser::factor() { RETURN_BINARY_EXPR(Binary, unary, SLASH, STAR); }
 
 ExprPtr Parser::unary()
 {
@@ -166,7 +321,21 @@ ExprPtr Parser::unary()
 		return make_unique<Unary>(op, std::move(right));
 	}
 
-	return primary();
+	return call();
+}
+
+ExprPtr Parser::call()
+{
+	auto expr = primary();
+
+	while (true) {
+		if (match({LEFT_PAREN}))
+			expr = finish_call(std::move(expr));
+		else
+			break;
+	}
+
+	return expr;
 }
 
 ExprPtr Parser::primary()
@@ -191,6 +360,27 @@ ExprPtr Parser::primary()
 	}
 
 	throw make_error(peek(), "Expect expression.");
+}
+
+ExprPtr Parser::finish_call(ExprPtr callee)
+{
+	vector<ExprPtr> arguments;
+
+	if (!check(RIGHT_PAREN)) {
+		do {
+			if (arguments.size() >= MAX_PARAMS)
+				make_error(
+					peek(),
+					format("Can't have more than {} arguments.", MAX_PARAMS)
+				);
+			// Continue even after the above error,
+			// because the parser is still in a valid known state
+			arguments.push_back(expression());
+		} while (match({COMMA}));
+	}
+
+	auto paren = consume(RIGHT_PAREN, "Expect ')' after arguments.");
+	return make_unique<Call>(std::move(callee), paren, std::move(arguments));
 }
 
 void Parser::synchronize()
