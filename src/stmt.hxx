@@ -14,6 +14,7 @@ struct Print;
 struct Assert;
 struct Break;
 struct Continue;
+struct Return;
 struct If;
 struct While;
 struct Var;
@@ -26,6 +27,7 @@ struct StmtVisitor {
 	virtual void visit_print_stmt(const Print &stmt) = 0;
 	virtual void visit_break_stmt(const Break &stmt) = 0;
 	virtual void visit_continue_stmt(const Continue &stmt) = 0;
+	virtual void visit_return_stmt(const Return &stmt) = 0;
 	virtual void visit_expr_stmt(const Expression &stmt) = 0;
 	virtual void visit_block_stmt(const Block &stmt) = 0;
 	virtual void visit_if_stmt(const If &stmt) = 0;
@@ -126,6 +128,22 @@ struct Continue : public Stmt {
 	}
 };
 
+struct Return : public Stmt {
+	Return(Token keyword_, ExprPtr value_)
+		: keyword(keyword_)
+		, value(std::move(value_))
+	{
+	}
+
+	void accept(StmtVisitor &visitor) override
+	{
+		visitor.visit_return_stmt(*this);
+	}
+
+	Token keyword;
+	ExprPtr value;
+};
+
 struct If : public Stmt {
 	If(ExprPtr condition_, StmtPtr then_branch_, StmtPtr else_branch_)
 		: condition(std::move(condition_))
@@ -180,7 +198,7 @@ struct Function : public Stmt {
 	)
 		: name(name_)
 		, params(std::move(params_))
-		, body(body_)
+		, body(std::move(body_))
 	{
 	}
 

@@ -84,13 +84,12 @@ private:
 	StmtPtr print_statement();
 	StmtPtr break_statement();
 	StmtPtr continue_statement();
+	StmtPtr return_statement();
 	StmtPtr if_statement();
 	StmtPtr while_statement();
 	StmtPtr for_statement();
 	StmtPtr block();
 	StmtPtr expression_statement();
-	// Statement parsing helpers
-	std::vector<StmtPtr> bare_block();
 
 	ExprPtr expression();
 	ExprPtr assignment();
@@ -104,13 +103,20 @@ private:
 	ExprPtr unary();
 	ExprPtr call();
 	ExprPtr primary();
-	// Expression parsing helpers
+
+	// Parsing helpers (common facilities)
+	// Parses a block. Like: { ... }
+	std::vector<StmtPtr> bare_block();
+	// Parses function call arguments and makes a Call object
+	// Like: arguments?)
 	ExprPtr finish_call(ExprPtr callee);
 
 	const std::vector<Token> tokens;
 	std::vector<Token>::size_type current = 0;
-	// Counts inside how many loops we are in currently
+	// Inside how many loops we are in currently
 	int loop_depth = 0;
+	// Inside how many functions we are in currently
+	int function_depth = 0;
 };
 
 #endif

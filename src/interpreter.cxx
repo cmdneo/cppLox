@@ -20,6 +20,7 @@
 using enum TokenType;
 using std::get;
 using std::make_shared;
+using std::make_unique;
 using std::string;
 
 // Helper functions and macros
@@ -75,6 +76,7 @@ Interpreter::Interpreter()
 {
 	globals->define("clock", make_shared<ClockFn>());
 	globals->define("sleep", make_shared<SleepFn>());
+	globals->define("string", make_shared<StringFn>());
 }
 
 void Interpreter::interpret(std::vector<StmtPtr> statements)
@@ -109,6 +111,11 @@ void Interpreter::visit_break_stmt(const Break &) { throw ControlBreak(); }
 void Interpreter::visit_continue_stmt(const Continue &)
 {
 	throw ControlContinue();
+}
+
+void Interpreter::visit_return_stmt(const Return &stmt)
+{
+	throw ControlReturn(evaluate(*stmt.value));
 }
 
 void Interpreter::visit_expr_stmt(const Expression &stmt)
@@ -150,7 +157,7 @@ void Interpreter::visit_var_stmt(const Var &stmt)
 
 void Interpreter::visit_function_stmt(const Function &stmt)
 {
-	CallablePtr function = std::make_unique<LoxFunction>(stmt);
+	CallablePtr function = make_unique<LoxFunction>(stmt, environment);
 	environment->define(stmt.name.lexeme, std::move(function));
 }
 
@@ -209,6 +216,7 @@ Object Interpreter::visit_unary_expr(const Unary &expr)
 	}
 
 	assert(!"Unreachable code");
+	return nullptr;
 }
 
 Object Interpreter::visit_binary_expr(const Binary &expr)
@@ -259,6 +267,7 @@ Object Interpreter::visit_binary_expr(const Binary &expr)
 	}
 
 	assert(!"Unreachable code");
+	return nullptr;
 }
 
 Object Interpreter::visit_logical_expr(const Logical &expr)
@@ -298,15 +307,31 @@ void Interpreter::execute_block(
 	const std::vector<StmtPtr> &statements, EnvironmentPtr block_environ
 )
 {
-	EnvironmentPtr previous = environment;
+	auto previous = environment;
 
+	// If any expected exceptions are encountered, then handle them,
+	// restore the environment and then rethrow the handeled exception.
+	// All this, because C++ doesn't have a finally clause like other languages.
 	try {
 		environment = block_environ;
 
 		for (const auto &stmt : statements)
 			execute(*stmt);
 	} catch (RuntimeError &err) {
-		// Restore the environment even if error is encountered
+		environment = previous;
+		throw err;
+	}
+	// Here, we are not subclassing all control-flow exceptions under
+	// a single base-class and using that to catch all subclasses.
+	// Because, then if we will rethrow the exception we will lose the type
+	// of the subclass and things will get complicated. So, just keep it simple.
+	catch (ControlBreak &err) {
+		environment = previous;
+		throw err;
+	} catch (ControlContinue &err) {
+		environment = previous;
+		throw err;
+	} catch (ControlReturn &err) {
 		environment = previous;
 		throw err;
 	}

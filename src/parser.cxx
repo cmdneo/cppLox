@@ -63,6 +63,7 @@ StmtPtr Parser::declaration()
 			return function("function");
 		if (match({VAR}))
 			return var_declaration();
+
 		return statement();
 	} catch (ParseError &) {
 		synchronize();
@@ -93,9 +94,11 @@ StmtPtr Parser::function(std::string_view kind)
 	consume(RIGHT_PAREN, "Expect ')' after parameters.");
 
 	consume(LEFT_BRACE, format("Expect '{{' before {} body.", kind));
+	function_depth++;
 	auto body = std::make_shared<std::vector<StmtPtr>>(bare_block());
+	function_depth--;
 
-	return make_unique<Function>(name, parameters, body);
+	return make_unique<Function>(name, std::move(parameters), std::move(body));
 }
 
 StmtPtr Parser::var_declaration()
@@ -122,6 +125,8 @@ StmtPtr Parser::statement()
 		return break_statement();
 	if (match({CONTINUE}))
 		return continue_statement();
+	if (match({RETURN}))
+		return return_statement();
 	if (match({IF}))
 		return if_statement();
 	if (match({WHILE}))
@@ -150,20 +155,32 @@ StmtPtr Parser::print_statement()
 
 StmtPtr Parser::break_statement()
 {
-	consume(SEMICOLON, "Expect ';' after 'break'.");
 	if (loop_depth == 0)
-		throw make_error(previous(), "'break' statement outside loop.");
-
+		make_error(previous(), "'break' outside loop.");
+	consume(SEMICOLON, "Expect ';' after 'break'.");
 	return make_unique<Break>();
 }
 
 StmtPtr Parser::continue_statement()
 {
-	consume(SEMICOLON, "Expect ';' after 'continue'.");
 	if (loop_depth == 0)
-		throw make_error(previous(), "'continue' statement outside loop.");
-
+		make_error(previous(), "'continue' outside loop.");
+	consume(SEMICOLON, "Expect ';' after 'continue'.");
 	return make_unique<Continue>();
+}
+
+StmtPtr Parser::return_statement()
+{
+	auto keyword = previous();
+	if (function_depth == 0)
+		make_error(keyword, "'return' outside function/method.");
+
+	ExprPtr value = make_unique<Literal>(nullptr);
+	if (!check(SEMICOLON))
+		value = expression();
+
+	consume(SEMICOLON, "Expect ';' after return value.");
+	return make_unique<Return>(keyword, std::move(value));
 }
 
 StmtPtr Parser::if_statement()

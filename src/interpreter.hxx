@@ -1,11 +1,10 @@
 #ifndef INTERPRETER_HXX_INCLUDED
 #define INTERPRETER_HXX_INCLUDED
 
-#include <exception>
+#include <memory>
+#include <string>
 #include <variant>
 #include <vector>
-#include <string>
-#include <memory>
 
 #include "error.hxx"
 #include "runtime_error.hxx"
@@ -28,6 +27,7 @@ public:
 	void visit_expr_stmt(const Expression &stmt) override;
 	void visit_block_stmt(const Block &stmt) override;
 	void visit_continue_stmt(const Continue &stmt) override;
+	void visit_return_stmt(const Return &stmt) override;
 	void visit_if_stmt(const If &stmt) override;
 	void visit_while_stmt(const While &stmt) override;
 	void visit_var_stmt(const Var &stmt) override;
@@ -47,12 +47,19 @@ public:
 	Object last_expr_result;
 
 private:
-	// Loop control-flow (exception)marker classes
-	struct ControlBreak : public std::exception {
-		ControlBreak() = default;
+	// Control-flow exceptions.
+	// We use the already available C++ exception mechanism to
+	// simplify the implementation of non-linear control flow statements
+	struct ControlBreak {
 	};
-	struct ControlContinue : public std::exception {
-		ControlContinue() = default;
+	struct ControlContinue {
+	};
+	struct ControlReturn {
+		ControlReturn(Object value_)
+			: value(value_)
+		{
+		}
+		Object value;
 	};
 
 	inline void execute(Stmt &stmt) { stmt.accept(*this); }

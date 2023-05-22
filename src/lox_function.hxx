@@ -6,12 +6,14 @@
 
 #include "object.hxx"
 #include "stmt.hxx"
+#include "environment.hxx"
 
 class Interpreter;
 
 struct LoxFunction : public Callable {
-	LoxFunction(const Function &stmt)
-		: declaration(stmt)
+	LoxFunction(const Function &declaration_, EnvironmentPtr closure_)
+		: declaration(declaration_)
+		, closure(closure_)
 	{
 	}
 
@@ -19,13 +21,14 @@ struct LoxFunction : public Callable {
 
 	std::string to_string() override
 	{
-		return "<fn " + std::string(declaration.name.lexeme) + ">";
+		return "<fn " + declaration.name.lexeme + ">";
 	}
 
 	Object
 	call(Interpreter &interpreter, std::vector<Object> &arguments) override;
 
 	Function declaration;
+	EnvironmentPtr closure;
 };
 
 #endif
