@@ -16,5 +16,7 @@ add_executable(
 	"src/error.cxx"
 	"src/scanner.cxx"
 	"src/parser.cxx"
+	"src/native.cxx"
+	"src/lox_function.cxx"
 	"src/interpreter.cxx"
 )

@@ -64,6 +64,7 @@ static std::string double_to_string_trimmed(double val)
 	}
 
 	assert(!"Unreachable code");
+	return "";
 }
 
 // Returns true if all primitives hold the value of the corresponding given type.

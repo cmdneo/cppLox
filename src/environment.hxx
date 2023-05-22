@@ -23,7 +23,7 @@ public:
 
 	void define(const std::string &name, const Object &value)
 	{
-		values[std::string(name)] = value;
+		values[name] = value;
 	}
 
 	void assign(const Token &name, const Object &value)
