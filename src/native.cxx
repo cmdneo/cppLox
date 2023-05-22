@@ -2,6 +2,7 @@
 #include <thread>
 #include <variant>
 
+#include "object.hxx"
 #include "native.hxx"
 
 using namespace std::chrono;
@@ -23,4 +24,9 @@ Object SleepFn::call(Interpreter &, std::vector<Object> &arguments)
 	unsigned time_ms = 1000.0 * std::get<double>(time);
 	std::this_thread::sleep_for(milliseconds(time_ms));
 	return nullptr;
+}
+
+Object StringFn::call(Interpreter &, std::vector<Object> &arguments)
+{
+	return ::to_string(arguments[0]);
 }
