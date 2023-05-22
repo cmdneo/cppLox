@@ -157,7 +157,7 @@ void Interpreter::visit_var_stmt(const Var &stmt)
 
 void Interpreter::visit_function_stmt(const Function &stmt)
 {
-	CallablePtr function = make_unique<LoxFunction>(stmt, environment);
+	CallablePtr function = make_shared<LoxFunction>(stmt, environment);
 	environment->define(stmt.name.lexeme, std::move(function));
 }
 
@@ -288,7 +288,7 @@ Object Interpreter::visit_logical_expr(const Logical &expr)
 Object Interpreter::visit_ternary_expr(const Ternary &expr)
 {
 	bool res = is_truthy(evaluate(*expr.condition));
-	return evaluate(*(res ? expr.expr1 : expr.expr2));
+	return evaluate(*(res ? expr.true_expr : expr.false_expr));
 }
 
 Object Interpreter::visit_variable_expr(const Variable &expr)

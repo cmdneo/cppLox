@@ -301,11 +301,11 @@ ExprPtr Parser::ternary()
 	auto expr = logic_or();
 
 	while (match({QUESTION})) {
-		auto expr1 = expression();
+		auto true_expr = expression();
 		consume(COLON, "Expect colon in ternary expression.");
-		auto expr2 = ternary();
+		auto false_expr = ternary();
 		return make_unique<Ternary>(
-			std::move(expr), std::move(expr1), std::move(expr2)
+			std::move(expr), std::move(true_expr), std::move(false_expr)
 		);
 	}
 

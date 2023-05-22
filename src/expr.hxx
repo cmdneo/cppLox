@@ -57,10 +57,10 @@ struct Assign : public Expr {
 };
 
 struct Ternary : public Expr {
-	Ternary(ExprPtr condition_, ExprPtr expr1_, ExprPtr expr2_)
+	Ternary(ExprPtr condition_, ExprPtr true_expr_, ExprPtr false_expr_)
 		: condition(std::move(condition_))
-		, expr1(std::move(expr1_))
-		, expr2(std::move(expr2_))
+		, true_expr(std::move(true_expr_))
+		, false_expr(std::move(false_expr_))
 	{
 	}
 
@@ -70,8 +70,8 @@ struct Ternary : public Expr {
 	}
 
 	const ExprPtr condition;
-	const ExprPtr expr1;
-	const ExprPtr expr2;
+	const ExprPtr true_expr;
+	const ExprPtr false_expr;
 };
 
 struct Logical : public Expr {

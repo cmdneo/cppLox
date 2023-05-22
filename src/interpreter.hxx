@@ -13,13 +13,14 @@
 #include "stmt.hxx"
 #include "environment.hxx"
 
-class Interpreter : public ExprVisitor, StmtVisitor
+class Interpreter : private ExprVisitor, private StmtVisitor
 {
 	friend struct LoxFunction;
 
 public:
 	Interpreter();
 	void interpret(std::vector<StmtPtr> statements);
+	void resolve(const Expr &expr, int depth);
 
 	void visit_assert_stmt(const Assert &stmt) override;
 	void visit_print_stmt(const Print &stmt) override;
