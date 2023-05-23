@@ -3,6 +3,7 @@
 
 #include <string>
 #include <vector>
+#include <utility>
 
 #include "object.hxx"
 #include "stmt.hxx"
@@ -13,7 +14,7 @@ class Interpreter;
 struct LoxFunction : public Callable {
 	LoxFunction(const Function &declaration_, EnvironmentPtr closure_)
 		: declaration(declaration_)
-		, closure(closure_)
+		, closure(std::move(closure_))
 	{
 	}
 

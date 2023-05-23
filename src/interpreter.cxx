@@ -2,6 +2,7 @@
 #include <cstddef>
 #include <iostream>
 #include <format>
+#include <functional>
 #include <variant>
 #include <string>
 #include <utility>
@@ -303,17 +304,50 @@ Object Interpreter::visit_assign_expr(const Assign &expr)
 	return value;
 }
 
+// Removes self-referential cycles from the environemt to prevent memory leaks.
+// It basically performs garbage collection for cyclic references
+void remove_cyclic_references(EnvironmentPtr &environment)
+{
+	// Only an Object of type LoxFunction (subclass of Callable)
+	// contains a reference to an environment.
+	// We just check for that and remove the cycle if found
+	for (auto &[key, value] : environment->values) {
+		// Note thah Callable is stored as a pointer since it an ABC
+		if (!match_types<CallablePtr>(value))
+			continue;
+
+		auto &callable = *get<CallablePtr>(value);
+		if (typeid(callable) != typeid(LoxFunction))
+			continue;
+
+		auto &function = dynamic_cast<LoxFunction &>(callable);
+		auto environ_ref = std::reference_wrapper(function.closure);
+		// Break the reference-cycle if found
+		while (environ_ref.get() != nullptr) {
+			if (environ_ref.get() == environment) {
+				environ_ref.get().reset();
+				break;
+			}
+			environ_ref = environ_ref.get()->encolsing;
+		}
+	}
+}
+
 void Interpreter::execute_block(
-	const std::vector<StmtPtr> &statements, EnvironmentPtr block_environ
+	const std::vector<StmtPtr> &statements, EnvironmentPtr &&block_environ
 )
 {
-	auto previous = environment;
+	auto previous = std::move(environment);
+	auto restore_environment = [&] {
+		remove_cyclic_references(environment);
+		environment = std::move(previous);
+	};
 
 	// If any expected exceptions are encountered, then handle them,
 	// restore the environment and then rethrow the handeled exception.
 	// All this, because C++ doesn't have a finally clause like other languages.
 	try {
-		environment = block_environ;
+		environment = std::move(block_environ);
 
 		for (const auto &stmt : statements)
 			execute(*stmt);
@@ -326,15 +360,15 @@ void Interpreter::execute_block(
 	// Because, then if we will rethrow the exception we will lose the type
 	// of the subclass and things will get complicated. So, just keep it simple.
 	catch (ControlBreak &err) {
-		environment = previous;
+		restore_environment();
 		throw err;
 	} catch (ControlContinue &err) {
-		environment = previous;
+		restore_environment();
 		throw err;
 	} catch (ControlReturn &err) {
-		environment = previous;
+		restore_environment();
 		throw err;
 	}
 
-	environment = previous;
+	restore_environment();
 }

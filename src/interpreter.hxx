@@ -1,6 +1,7 @@
 #ifndef INTERPRETER_HXX_INCLUDED
 #define INTERPRETER_HXX_INCLUDED
 
+#include <map>
 #include <memory>
 #include <string>
 #include <variant>
@@ -20,7 +21,7 @@ class Interpreter : private ExprVisitor, private StmtVisitor
 public:
 	Interpreter();
 	void interpret(std::vector<StmtPtr> statements);
-	void resolve(const Expr &expr, int depth);
+	void resolve(const Expr &expr, int depth) { locals[&expr] = depth; }
 
 	void visit_assert_stmt(const Assert &stmt) override;
 	void visit_print_stmt(const Print &stmt) override;
@@ -68,11 +69,12 @@ private:
 	inline Object evaluate(Expr &expr) { return expr.accept(*this); }
 
 	void execute_block(
-		const std::vector<StmtPtr> &statements, EnvironmentPtr block_environ
+		const std::vector<StmtPtr> &statements, EnvironmentPtr &&block_environ
 	);
 
 	EnvironmentPtr globals = std::make_shared<Environment>();
 	EnvironmentPtr environment = globals;
+	std::map<const Expr *, int> locals;
 };
 
 #endif

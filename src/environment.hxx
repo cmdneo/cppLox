@@ -15,6 +15,8 @@ using EnvironmentPtr = std::shared_ptr<Environment>;
 
 class Environment
 {
+	friend void remove_cyclic_references(EnvironmentPtr &environment);
+
 public:
 	Environment(EnvironmentPtr encolsing_env = nullptr)
 		: encolsing(encolsing_env)

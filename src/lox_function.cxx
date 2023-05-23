@@ -1,5 +1,6 @@
 #include <cassert>
 #include <memory>
+#include <utility>
 
 #include "object.hxx"
 #include "lox_function.hxx"
@@ -16,7 +17,7 @@ LoxFunction::call(Interpreter &interpreter, std::vector<Object> &arguments)
 		environment->define(declaration.params[i].lexeme, arguments[i]);
 
 	try {
-		interpreter.execute_block(*declaration.body, environment);
+		interpreter.execute_block(*declaration.body, std::move(environment));
 	} catch (Interpreter::ControlReturn &return_value) {
 		return return_value.value;
 	}
