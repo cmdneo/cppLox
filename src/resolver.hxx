@@ -56,6 +56,10 @@ public:
 
 		for (auto &method : stmt.methods) {
 			auto declaration = FunctionType::Method;
+			// If a method with the name "init" exists inside a class,
+			// then it is a contructor for the class instances
+			if (method.name.lexeme == "init")
+				declaration = FunctionType::Initializer;
 			resolve_function(method, declaration);
 		}
 
@@ -80,7 +84,16 @@ public:
 		if (current_function == FunctionType::None)
 			print_error((stmt.keyword), "Return statement outside function.");
 
-		resolve(*stmt.value);
+		// Disallow returning a value from an initializer
+		if (stmt.value != nullptr
+			&& current_function == FunctionType::Initializer) {
+			print_error(
+				stmt.keyword, "Can't return a value from an initializer."
+			);
+		}
+
+		if (stmt.value != nullptr)
+			resolve(*stmt.value);
 	}
 
 	void visit_if_stmt(const If &stmt) override
@@ -213,7 +226,7 @@ public:
 
 private:
 	enum class ClassType { None, Class };
-	enum class FunctionType { None, Function, Method };
+	enum class FunctionType { None, Function, Initializer, Method };
 	enum class LoopType { None, While };
 
 	// Just const_cast instead of sticking const in every accept method

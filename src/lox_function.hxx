@@ -12,14 +12,22 @@
 #include "environment.hxx"
 
 class Interpreter;
-struct LoxFunction;
+class LoxFunction;
 
 using LoxFunctionPtr = std::shared_ptr<LoxFunction>;
 
-struct LoxFunction : public LoxCallable {
-	LoxFunction(const Function &declaration_, EnvironmentPtr closure_)
+class LoxFunction : public LoxCallable
+{
+	friend class LoxClass;
+
+public:
+	LoxFunction(
+		const Function &declaration_, EnvironmentPtr closure_,
+		bool is_init = false
+	)
 		: declaration(declaration_)
 		, closure(std::move(closure_))
+		, is_initializer(is_init)
 	{
 	}
 
@@ -41,12 +49,14 @@ struct LoxFunction : public LoxCallable {
 		environment->define("this", std::move(instance));
 
 		return std::make_unique<LoxFunction>(
-			declaration, std::move(environment)
+			declaration, std::move(environment), is_initializer
 		);
 	}
 
+private:
 	Function declaration;
 	EnvironmentPtr closure;
+	bool is_initializer = false;
 };
 
 #endif

@@ -54,9 +54,8 @@ unary        = ( "!" | "-" | "+" ) unary
 call         = primary ( "(" arguments? ")" | "." IDENTIFIER )* ;
 primary      = NUMBER | STRING | "true" | "false" | "nil"
              |  "(" expression ")"
-             | lambda
+             | "this"
              | IDENTIFIER ;
-lambda       = "fun" "(" parameters? ")" ;
 
 arguments    = expression ( "," expression )* ;
 parameters   = IDENTIFIER ( "," IDENTIFIER )* ;

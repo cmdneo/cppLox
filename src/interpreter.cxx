@@ -124,6 +124,8 @@ void Interpreter::visit_continue_stmt(const Continue &)
 
 void Interpreter::visit_return_stmt(const Return &stmt)
 {
+	if (stmt.value == nullptr)
+		throw ControlReturn(Object(nullptr));
 	throw ControlReturn(evaluate(*stmt.value));
 }
 
@@ -177,9 +179,10 @@ void Interpreter::visit_class_stmt(const Class &stmt)
 
 	ClassMethodMap methods;
 	for (auto &method : stmt.methods) {
+		bool is_init = method.name.lexeme == "init";
 		methods.insert({
 			method.name.lexeme,
-			make_unique<LoxFunction>(method, environment),
+			make_unique<LoxFunction>(method, environment, is_init),
 		});
 	}
 
@@ -366,42 +369,15 @@ Object Interpreter::visit_assign_expr(const Assign &expr)
 	return value;
 }
 
-// Removes self-referential cycles from the environemt to prevent memory leaks.
-// It basically performs garbage collection for cyclic references
-void remove_cyclic_references(EnvironmentPtr &environment)
-{
-	// Only an Object of type LoxFunction (subclass of LoxCallable)
-	// contains a reference to an environment.
-	// We just check for that and remove the cycle if found
-	for (auto &[key, value] : environment->values) {
-		// Note thah LoxCallable is stored as a pointer since it an ABC
-		if (!match_types<LoxCallablePtr>(value))
-			continue;
-
-		auto &callable = *get<LoxCallablePtr>(value);
-		if (typeid(callable) != typeid(LoxFunction))
-			continue;
-
-		auto &function = dynamic_cast<LoxFunction &>(callable);
-		auto environ_ref = std::reference_wrapper(function.closure);
-		// Break the reference-cycle if found
-		while (environ_ref.get() != nullptr) {
-			if (environ_ref.get() == environment) {
-				environ_ref.get().reset();
-				break;
-			}
-			environ_ref = environ_ref.get()->encolsing;
-		}
-	}
-}
-
 void Interpreter::execute_block(
 	const std::vector<StmtPtr> &statements, EnvironmentPtr &&block_environ
 )
 {
 	auto previous = std::move(environment);
 	auto restore_environment = [&] {
-		remove_cyclic_references(environment);
+		// Clear the environment values before removing it
+		// this prevents cyclic-references which causes memory leaks
+		environment->clear();
 		environment = std::move(previous);
 	};
 

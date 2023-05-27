@@ -16,7 +16,7 @@
 
 class Interpreter : private ExprVisitor, private StmtVisitor
 {
-	friend struct LoxFunction;
+	friend class LoxFunction;
 
 public:
 	Interpreter();
@@ -69,7 +69,7 @@ private:
 		auto result = locals.find(&expr);
 		if (result != locals.end()) {
 			auto distance = result->second;
-			return environment->get_at(distance, name);
+			return environment->get_at(distance, name.lexeme);
 		} else {
 			return globals->get(name);
 		}

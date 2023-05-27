@@ -184,7 +184,7 @@ StmtPtr Parser::continue_statement()
 StmtPtr Parser::return_statement()
 {
 	auto keyword = previous();
-	ExprPtr value = make_unique<Literal>(nullptr);
+	ExprPtr value = nullptr;
 	if (!check(SEMICOLON))
 		value = expression();
 
@@ -293,15 +293,17 @@ ExprPtr Parser::assignment()
 	if (match({EQUAL})) {
 		auto equals = previous();
 		auto value = assignment();
+		// Already get a reference to remove side-effect warning in typeid
+		auto &expr_ref = *expr;
 
 		// If Variable then just assign.
-		if (typeid(expr.get()) == typeid(Variable &)) {
+		if (typeid(expr_ref) == typeid(Variable)) {
 			auto name = dynamic_cast<Variable &>(*expr).name;
 			return make_unique<Assign>(name, std::move(value));
 		}
 		// If Set(like: object.name) then transform it into a Get,
 		// where the rightmost part(name) is the property to be set.
-		else if (typeid(expr.get()) == typeid(Get &)) {
+		else if (typeid(expr_ref) == typeid(Get)) {
 			auto &get = dynamic_cast<Get &>(*expr);
 			return make_unique<Set>(
 				std::move(get.object), get.name, std::move(value)

@@ -27,7 +27,7 @@ public:
 	{
 	}
 
-	LoxFunctionPtr find_method(const std::string &method_name)
+	LoxFunctionPtr find_method(const std::string &method_name) const
 	{
 		auto result = methods.find(method_name);
 		if (result != methods.end())
@@ -37,7 +37,13 @@ public:
 
 	std::string to_string() const override { return "<class " + name + ">"; }
 
-	unsigned arity() const override { return 0; }
+	unsigned arity() const override
+	{
+		auto initializer = find_method("init");
+		if (initializer == nullptr)
+			return 0;
+		return initializer->arity();
+	}
 
 	Object
 	call(Interpreter &interpreter, std::vector<Object> &arguments) override;
