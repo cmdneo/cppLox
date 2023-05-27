@@ -11,6 +11,7 @@
 #include "ast_printer.hxx"
 #include "scanner.hxx"
 #include "parser.hxx"
+#include "resolver.hxx"
 #include "interpreter.hxx"
 
 using std::cout;
@@ -28,6 +29,14 @@ void run_lox_interpreter(string_view source)
 
 	auto statements = parser.parse();
 
+	// Is parsing errors
+	if (lox_had_error)
+		return;
+
+	Resolver resolver(interpreter);
+	resolver.resolve(statements);
+
+	// If resolution errorsa
 	if (lox_had_error)
 		return;
 

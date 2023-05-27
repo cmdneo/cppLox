@@ -34,10 +34,14 @@ public:
 	void visit_while_stmt(const While &stmt) override;
 	void visit_var_stmt(const Var &stmt) override;
 	void visit_function_stmt(const Function &stmt) override;
+	void visit_class_stmt(const Class &stmt) override;
 
 	Object visit_literal_expr(const Literal &expr) override;
 	Object visit_grouping_expr(const Grouping &expr) override;
 	Object visit_call_expr(const Call &expr) override;
+	Object visit_get_expr(const Get &expr) override;
+	Object visit_set_expr(const Set &expr) override;
+	Object visit_this_expr(const This &expr) override;
 	Object visit_unary_expr(const Unary &expr) override;
 	Object visit_binary_expr(const Binary &expr) override;
 	Object visit_logical_expr(const Logical &expr) override;
@@ -57,12 +61,19 @@ private:
 	struct ControlContinue {
 	};
 	struct ControlReturn {
-		ControlReturn(Object value_)
-			: value(value_)
-		{
-		}
 		Object value;
 	};
+
+	Object look_up_variable(const Token &name, const Expr &expr)
+	{
+		auto result = locals.find(&expr);
+		if (result != locals.end()) {
+			auto distance = result->second;
+			return environment->get_at(distance, name);
+		} else {
+			return globals->get(name);
+		}
+	}
 
 	inline void execute(Stmt &stmt) { stmt.accept(*this); }
 

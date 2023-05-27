@@ -1,11 +1,12 @@
 #include <cassert>
 #include <cstddef>
-#include <iostream>
 #include <format>
 #include <functional>
-#include <variant>
+#include <iostream>
+#include <map>
 #include <string>
 #include <utility>
+#include <variant>
 
 #include "runtime_error.hxx"
 #include "token_type.hxx"
@@ -16,7 +17,10 @@
 #include "environment.hxx"
 #include "interpreter.hxx"
 #include "native.hxx"
+#include "lox_callable.hxx"
 #include "lox_function.hxx"
+#include "lox_class.hxx"
+#include "lox_instance.hxx"
 
 using enum TokenType;
 using std::get;
@@ -27,11 +31,14 @@ using std::string;
 // Helper functions and macros
 //---------------------------------------------------------
 
+// Calculates and returns the result, both operands should be numbers.
 #define RETURN_NUMBER_BINOP(left, right, op_token)                    \
 	do {                                                              \
 		return Object(get<double>(left) op_token get<double>(right)); \
 	} while (0)
 
+// Operates and returns the result if both operands are numbers or
+// both operands are strings, otherwise does nothing.
 #define RETURN_NUMBER_OR_STRING_BINOP(left, right, op_token)              \
 	do {                                                                  \
 		if (match_types<double, double>(left, right)) {                   \
@@ -78,6 +85,7 @@ Interpreter::Interpreter()
 	globals->define("clock", make_shared<ClockFn>());
 	globals->define("sleep", make_shared<SleepFn>());
 	globals->define("string", make_shared<StringFn>());
+	globals->define("instance_of", make_shared<InstanceOfFn>());
 }
 
 void Interpreter::interpret(std::vector<StmtPtr> statements)
@@ -153,13 +161,31 @@ void Interpreter::visit_while_stmt(const While &stmt)
 void Interpreter::visit_var_stmt(const Var &stmt)
 {
 	auto value = evaluate(*stmt.initializer);
+	auto klass = make_shared<Variable>(stmt.name);
 	environment->define(stmt.name.lexeme, value);
 }
 
 void Interpreter::visit_function_stmt(const Function &stmt)
 {
-	CallablePtr function = make_shared<LoxFunction>(stmt, environment);
+	LoxCallablePtr function = make_shared<LoxFunction>(stmt, environment);
 	environment->define(stmt.name.lexeme, std::move(function));
+}
+
+void Interpreter::visit_class_stmt(const Class &stmt)
+{
+	environment->define(stmt.name.lexeme, nullptr);
+
+	ClassMethodMap methods;
+	for (auto &method : stmt.methods) {
+		methods.insert({
+			method.name.lexeme,
+			make_unique<LoxFunction>(method, environment),
+		});
+	}
+
+	auto klass = make_shared<LoxClass>(stmt.name.lexeme, std::move(methods));
+	klass->self_ptr = klass;
+	environment->assign(stmt.name, std::move(klass));
 }
 
 // Expression visitor methods
@@ -183,9 +209,13 @@ Object Interpreter::visit_call_expr(const Call &expr)
 	for (auto &arg : expr.arguments)
 		arguments.push_back(evaluate(*arg));
 
-	if (!match_types<CallablePtr>(callee))
+	LoxCallablePtr function = nullptr;
+	if (match_types<LoxCallablePtr>(callee))
+		function = get<LoxCallablePtr>(callee);
+	else if (match_types<LoxClassPtr>(callee))
+		function = get<LoxClassPtr>(callee);
+	else
 		throw RuntimeError(expr.paren, "Can only call functions and classes.");
-	auto function = get<CallablePtr>(callee);
 
 	if (arguments.size() != function->arity()) {
 		auto err_msg = std::format(
@@ -196,6 +226,31 @@ Object Interpreter::visit_call_expr(const Call &expr)
 	}
 
 	return function->call(*this, arguments);
+}
+
+Object Interpreter::visit_get_expr(const Get &expr)
+{
+	auto object = evaluate(*expr.object);
+	if (!match_types<LoxInstancePtr>(object))
+		throw RuntimeError(expr.name, "Only instances have properties.");
+
+	return get<LoxInstancePtr>(object)->get(expr.name);
+}
+
+Object Interpreter::visit_set_expr(const Set &expr)
+{
+	auto object = evaluate(*expr.object);
+	if (!match_types<LoxInstancePtr>(object))
+		throw RuntimeError(expr.name, "Only instances have fields.");
+
+	auto value = evaluate(*expr.value);
+	get<LoxInstancePtr>(object)->set(expr.name, value);
+	return value;
+}
+
+Object Interpreter::visit_this_expr(const This &expr)
+{
+	return look_up_variable(expr.keyword, expr);
 }
 
 Object Interpreter::visit_unary_expr(const Unary &expr)
@@ -294,13 +349,20 @@ Object Interpreter::visit_ternary_expr(const Ternary &expr)
 
 Object Interpreter::visit_variable_expr(const Variable &expr)
 {
-	return environment->get(expr.name);
+	return look_up_variable(expr.name, expr);
 }
 
 Object Interpreter::visit_assign_expr(const Assign &expr)
 {
 	auto value = evaluate(*expr.expression);
-	environment->assign(expr.name, value);
+	auto result = locals.find(&expr);
+	if (result != locals.end()) {
+		auto distance = result->second;
+		environment->assign_at(distance, expr.name, value);
+	} else {
+		globals->assign(expr.name, value);
+	}
+
 	return value;
 }
 
@@ -308,15 +370,15 @@ Object Interpreter::visit_assign_expr(const Assign &expr)
 // It basically performs garbage collection for cyclic references
 void remove_cyclic_references(EnvironmentPtr &environment)
 {
-	// Only an Object of type LoxFunction (subclass of Callable)
+	// Only an Object of type LoxFunction (subclass of LoxCallable)
 	// contains a reference to an environment.
 	// We just check for that and remove the cycle if found
 	for (auto &[key, value] : environment->values) {
-		// Note thah Callable is stored as a pointer since it an ABC
-		if (!match_types<CallablePtr>(value))
+		// Note thah LoxCallable is stored as a pointer since it an ABC
+		if (!match_types<LoxCallablePtr>(value))
 			continue;
 
-		auto &callable = *get<CallablePtr>(value);
+		auto &callable = *get<LoxCallablePtr>(value);
 		if (typeid(callable) != typeid(LoxFunction))
 			continue;
 
