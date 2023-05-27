@@ -4,33 +4,26 @@
 #include <string>
 #include <vector>
 
-#include "runtime_error.hxx"
 #include "object.hxx"
+#include "lox_callable.hxx"
+
+class Interpreter;
+
+#define GENERATE_NATIVE_FUNCTION(class_name, arity_expr, name_str)  \
+	struct class_name : public LoxCallable {                        \
+		unsigned arity() const override { return arity_expr; }      \
+		std::string to_string() const override { return name_str; } \
+		Object call(Interpreter &, std::vector<Object> &) override; \
+	}
 
 // Native(built-in) functions
+GENERATE_NATIVE_FUNCTION(ClockFn, 0, "<native-fn clock>");
+GENERATE_NATIVE_FUNCTION(SleepFn, 1, "<native-fn sleep>");
+GENERATE_NATIVE_FUNCTION(StringFn, 1, "<native-fn string>");
+GENERATE_NATIVE_FUNCTION(InstanceOfFn, 2, "<native-fn instance_of>");
 
-struct ClockFn : public Callable {
-	unsigned arity() override { return 0; }
-	std::string to_string() override { return "<native-fn clock>"; }
+#undef GENERATE_NATIVE_FUNCTION
 
-	Object
-	call(Interpreter &interpreter, std::vector<Object> &arguments) override;
-};
 
-struct SleepFn : public Callable {
-	unsigned arity() override { return 1; }
-	std::string to_string() override { return "<native-fn sleep>"; }
-
-	Object
-	call(Interpreter &interpreter, std::vector<Object> &arguments) override;
-};
-
-struct StringFn : public Callable {
-	unsigned arity() override { return 1; }
-	std::string to_string() override { return "<native-fn string>"; }
-
-	Object
-	call(Interpreter &interpreter, std::vector<Object> &arguments) override;
-};
 
 #endif
