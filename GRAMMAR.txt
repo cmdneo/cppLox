@@ -2,10 +2,12 @@ Grammar specification using eBNF-like syntax:
 
 program      = declaration* EOF ;
 
-declaration  = funDecl
+declaration  = classDecl
+             | funDecl
              | varDecl
              | statement ;
 
+classDecl    = "class" IDENTIFIER "{" function* "}" ;
 funDecl      = "fun" function;
 function     = IDENTIFIER "(" parameters? ")" block ;
 
@@ -37,7 +39,7 @@ block        = "{" declaration* "}" ;
 exprStmt     = expression ";" ;
 
 expression   = assignment ;
-assignment   = IDENTIFIER "=" assignment
+assignment   = ( call "." )? IDENTIFIER "=" assignment
              | ternary ;
 ternary      = logic_or "?" expression ":" ternary
              | logic_or ;
@@ -49,7 +51,7 @@ term         = factor ( ( "+" | "-" ) factor )* ;
 factor       = unary ( ( "/" | "*" ) unary )* ;
 unary        = ( "!" | "-" | "+" ) unary
              | call ;
-call         = primary ( "(" arguments? ")" )* ;
+call         = primary ( "(" arguments? ")" | "." IDENTIFIER )* ;
 primary      = NUMBER | STRING | "true" | "false" | "nil"
              |  "(" expression ")"
              | lambda
