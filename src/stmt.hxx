@@ -19,21 +19,23 @@ struct If;
 struct While;
 struct Var;
 struct Function;
+struct Class;
 
 using StmtPtr = std::unique_ptr<Stmt>;
 
 struct StmtVisitor {
-	virtual void visit_assert_stmt(const Assert &stmt) = 0;
+	virtual void visit_block_stmt(const Block &stmt) = 0;
+	virtual void visit_expr_stmt(const Expression &stmt) = 0;
 	virtual void visit_print_stmt(const Print &stmt) = 0;
+	virtual void visit_assert_stmt(const Assert &stmt) = 0;
 	virtual void visit_break_stmt(const Break &stmt) = 0;
 	virtual void visit_continue_stmt(const Continue &stmt) = 0;
 	virtual void visit_return_stmt(const Return &stmt) = 0;
-	virtual void visit_expr_stmt(const Expression &stmt) = 0;
-	virtual void visit_block_stmt(const Block &stmt) = 0;
 	virtual void visit_if_stmt(const If &stmt) = 0;
 	virtual void visit_while_stmt(const While &stmt) = 0;
 	virtual void visit_var_stmt(const Var &stmt) = 0;
 	virtual void visit_function_stmt(const Function &stmt) = 0;
+	virtual void visit_class_stmt(const Class &stmt) = 0;
 	virtual ~StmtVisitor() = default;
 };
 
@@ -94,7 +96,7 @@ struct Print : public Stmt {
 };
 
 struct Assert : public Stmt {
-	Assert(Token token_, ExprPtr expr)
+	Assert(const Token &token_, ExprPtr expr)
 		: token(token_)
 		, expression(std::move(expr))
 	{
@@ -111,25 +113,35 @@ struct Assert : public Stmt {
 };
 
 struct Break : public Stmt {
-	Break() = default;
+	Break(const Token &keyword_)
+		: keyword(keyword_)
+	{
+	}
 
 	void accept(StmtVisitor &visitor) override
 	{
 		visitor.visit_break_stmt(*this);
 	}
+
+	Token keyword;
 };
 
 struct Continue : public Stmt {
-	Continue() = default;
+	Continue(const Token &keyword_)
+		: keyword(keyword_)
+	{
+	}
 
 	void accept(StmtVisitor &visitor) override
 	{
 		visitor.visit_continue_stmt(*this);
 	}
+
+	Token keyword;
 };
 
 struct Return : public Stmt {
-	Return(Token keyword_, ExprPtr value_)
+	Return(const Token &keyword_, ExprPtr value_)
 		: keyword(keyword_)
 		, value(std::move(value_))
 	{
@@ -176,7 +188,7 @@ struct While : public Stmt {
 };
 
 struct Var : public Stmt {
-	Var(Token name_, ExprPtr initializer_)
+	Var(const Token &name_, ExprPtr initializer_)
 		: name(name_)
 		, initializer(std::move(initializer_))
 	{
@@ -193,7 +205,7 @@ struct Var : public Stmt {
 
 struct Function : public Stmt {
 	Function(
-		Token name_, std::vector<Token> params_,
+		const Token &name_, std::vector<Token> params_,
 		std::shared_ptr<std::vector<StmtPtr>> body_
 	)
 		: name(name_)
@@ -210,6 +222,19 @@ struct Function : public Stmt {
 	// so instead of copying the AST which will be very complicated.
 	// Use shared_ptr to share the reference to the AST which was constructed.
 	std::shared_ptr<std::vector<StmtPtr>> body;
+};
+
+struct Class : public Stmt {
+	Class(const Token &name_, std::vector<Function> methods_)
+		: name(name_)
+		, methods(std::move(methods_))
+	{
+	}
+
+	void accept(StmtVisitor &visitor) { visitor.visit_class_stmt(*this); }
+
+	Token name;
+	std::vector<Function> methods;
 };
 
 #endif

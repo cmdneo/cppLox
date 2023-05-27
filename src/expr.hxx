@@ -15,6 +15,9 @@ struct Ternary;
 struct Logical;
 struct Binary;
 struct Call;
+struct Get;
+struct Set;
+struct This;
 struct Grouping;
 struct Literal;
 struct Unary;
@@ -28,6 +31,9 @@ struct ExprVisitor {
 	virtual Object visit_logical_expr(const Logical &expr) = 0;
 	virtual Object visit_binary_expr(const Binary &expr) = 0;
 	virtual Object visit_call_expr(const Call &expr) = 0;
+	virtual Object visit_get_expr(const Get &expr) = 0;
+	virtual Object visit_set_expr(const Set &expr) = 0;
+	virtual Object visit_this_expr(const This &expr) = 0;
 	virtual Object visit_grouping_expr(const Grouping &expr) = 0;
 	virtual Object visit_literal_expr(const Literal &expr) = 0;
 	virtual Object visit_unary_expr(const Unary &expr) = 0;
@@ -41,7 +47,7 @@ struct Expr {
 };
 
 struct Assign : public Expr {
-	Assign(Token name_, ExprPtr expression_)
+	Assign(const Token &name_, ExprPtr expression_)
 		: name(name_)
 		, expression(std::move(expression_))
 	{
@@ -75,7 +81,7 @@ struct Ternary : public Expr {
 };
 
 struct Logical : public Expr {
-	Logical(ExprPtr left_, Token operat_, ExprPtr right_)
+	Logical(ExprPtr left_, const Token &operat_, ExprPtr right_)
 		: left(std::move(left_))
 		, operat(operat_)
 		, right(std::move(right_))
@@ -93,7 +99,7 @@ struct Logical : public Expr {
 };
 
 struct Binary : public Expr {
-	Binary(ExprPtr left_, Token operat_, ExprPtr right_)
+	Binary(ExprPtr left_, const Token &operat_, ExprPtr right_)
 		: left(std::move(left_))
 		, operat(operat_)
 		, right(std::move(right_))
@@ -111,7 +117,7 @@ struct Binary : public Expr {
 };
 
 struct Call : public Expr {
-	Call(ExprPtr callee_, Token paren_, std::vector<ExprPtr> arguments_)
+	Call(ExprPtr callee_, const Token &paren_, std::vector<ExprPtr> arguments_)
 		: callee(std::move(callee_))
 		, paren(paren_)
 		, arguments(std::move(arguments_))
@@ -126,6 +132,54 @@ struct Call : public Expr {
 	ExprPtr callee;
 	Token paren;
 	std::vector<ExprPtr> arguments;
+};
+
+struct Get : public Expr {
+	Get(ExprPtr object_, const Token &name_)
+		: object(std::move(object_))
+		, name(name_)
+	{
+	}
+
+	Object accept(ExprVisitor &visitor) override
+	{
+		return visitor.visit_get_expr(*this);
+	}
+
+	ExprPtr object;
+	Token name;
+};
+
+struct Set : public Expr {
+	Set(ExprPtr object_, const Token &name_, ExprPtr value_)
+		: object(std::move(object_))
+		, name(name_)
+		, value(std::move(value_))
+	{
+	}
+
+	Object accept(ExprVisitor &visitor) override
+	{
+		return visitor.visit_set_expr(*this);
+	}
+
+	ExprPtr object;
+	Token name;
+	ExprPtr value;
+};
+
+struct This : public Expr {
+	This(const Token &keyword_)
+		: keyword(keyword_)
+	{
+	}
+
+	Object accept(ExprVisitor &visitor) override
+	{
+		return visitor.visit_this_expr(*this);
+	}
+
+	Token keyword;
 };
 
 struct Grouping : public Expr {
@@ -157,7 +211,7 @@ struct Literal : public Expr {
 };
 
 struct Unary : public Expr {
-	Unary(Token operat_, ExprPtr right_)
+	Unary(const Token &operat_, ExprPtr right_)
 		: operat(operat_)
 		, right(std::move(right_))
 	{
@@ -173,7 +227,7 @@ struct Unary : public Expr {
 };
 
 struct Variable : public Expr {
-	Variable(Token name_)
+	Variable(const Token &name_)
 		: name(name_)
 	{
 	}

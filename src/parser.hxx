@@ -77,7 +77,8 @@ private:
 	void synchronize();
 
 	StmtPtr declaration();
-	StmtPtr function(std::string_view kind);
+	StmtPtr class_declaration();
+	Function function(std::string_view kind);
 	StmtPtr var_declaration();
 	StmtPtr statement();
 	StmtPtr assert_statement();
@@ -113,10 +114,6 @@ private:
 
 	const std::vector<Token> tokens;
 	std::vector<Token>::size_type current = 0;
-	// Inside how many loops we are in currently
-	int loop_depth = 0;
-	// Inside how many functions we are in currently
-	int function_depth = 0;
 };
 
 #endif

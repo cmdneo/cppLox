@@ -59,8 +59,10 @@ std::vector<StmtPtr> Parser::parse()
 StmtPtr Parser::declaration()
 {
 	try {
+		if (match({CLASS}))
+			return class_declaration();
 		if (match({FUN}))
-			return function("function");
+			return make_unique<Function>(function("function"));
 		if (match({VAR}))
 			return var_declaration();
 
@@ -71,9 +73,23 @@ StmtPtr Parser::declaration()
 	}
 
 	assert(!"Unreachable code");
+	return nullptr;
 }
 
-StmtPtr Parser::function(std::string_view kind)
+StmtPtr Parser::class_declaration()
+{
+	auto name = consume(IDENTIFIER, "Expect class name.");
+	consume(LEFT_BRACE, "Expect '{' before class body.");
+
+	std::vector<Function> methods;
+	while (!check(RIGHT_BRACE) && !is_at_end())
+		methods.push_back(function("method"));
+
+	consume(RIGHT_BRACE, "Expect '}' after class body.");
+	return make_unique<Class>(name, std::move(methods));
+}
+
+Function Parser::function(std::string_view kind)
 {
 	auto name = consume(IDENTIFIER, format("Expect {} name.", kind));
 	consume(LEFT_PAREN, format("Expect '(' after {} name.", kind));
@@ -94,11 +110,9 @@ StmtPtr Parser::function(std::string_view kind)
 	consume(RIGHT_PAREN, "Expect ')' after parameters.");
 
 	consume(LEFT_BRACE, format("Expect '{{' before {} body.", kind));
-	function_depth++;
 	auto body = std::make_shared<std::vector<StmtPtr>>(bare_block());
-	function_depth--;
 
-	return make_unique<Function>(name, std::move(parameters), std::move(body));
+	return Function(name, std::move(parameters), std::move(body));
 }
 
 StmtPtr Parser::var_declaration()
@@ -155,26 +169,21 @@ StmtPtr Parser::print_statement()
 
 StmtPtr Parser::break_statement()
 {
-	if (loop_depth == 0)
-		make_error(previous(), "'break' outside loop.");
+	auto keyword = previous();
 	consume(SEMICOLON, "Expect ';' after 'break'.");
-	return make_unique<Break>();
+	return make_unique<Break>(keyword);
 }
 
 StmtPtr Parser::continue_statement()
 {
-	if (loop_depth == 0)
-		make_error(previous(), "'continue' outside loop.");
+	auto keyword = previous();
 	consume(SEMICOLON, "Expect ';' after 'continue'.");
-	return make_unique<Continue>();
+	return make_unique<Continue>(keyword);
 }
 
 StmtPtr Parser::return_statement()
 {
 	auto keyword = previous();
-	if (function_depth == 0)
-		make_error(keyword, "'return' outside function/method.");
-
 	ExprPtr value = make_unique<Literal>(nullptr);
 	if (!check(SEMICOLON))
 		value = expression();
@@ -203,10 +212,7 @@ StmtPtr Parser::while_statement()
 	auto condition = expression();
 	consume(RIGHT_PAREN, "Expect ')' after condition.");
 
-	loop_depth++;
 	auto body = statement();
-	loop_depth--;
-
 	return make_unique<While>(std::move(condition), std::move(body));
 }
 
@@ -279,16 +285,28 @@ ExprPtr Parser::expression() { return assignment(); }
 
 ExprPtr Parser::assignment()
 {
+	// Since the '=' can be any-number of tokens ahead,
+	// parse the left hand side and then check for equal sign.
+	// Then, check if the assingment target is valid.
 	auto expr = ternary();
 
 	if (match({EQUAL})) {
 		auto equals = previous();
 		auto value = assignment();
 
-		try {
+		// If Variable then just assign.
+		if (typeid(expr.get()) == typeid(Variable &)) {
 			auto name = dynamic_cast<Variable &>(*expr).name;
 			return make_unique<Assign>(name, std::move(value));
-		} catch (std::bad_cast &) {
+		}
+		// If Set(like: object.name) then transform it into a Get,
+		// where the rightmost part(name) is the property to be set.
+		else if (typeid(expr.get()) == typeid(Get &)) {
+			auto &get = dynamic_cast<Get &>(*expr);
+			return make_unique<Set>(
+				std::move(get.object), get.name, std::move(value)
+			);
+		} else {
 			print_error(equals, "Invalid assignment target.");
 		}
 	}
@@ -346,10 +364,14 @@ ExprPtr Parser::call()
 	auto expr = primary();
 
 	while (true) {
-		if (match({LEFT_PAREN}))
+		if (match({DOT})) {
+			auto name = consume(IDENTIFIER, "Expect property name after '.'.");
+			expr = make_unique<Get>(std::move(expr), name);
+		} else if (match({LEFT_PAREN})) {
 			expr = finish_call(std::move(expr));
-		else
+		} else {
 			break;
+		}
 	}
 
 	return expr;
@@ -366,6 +388,9 @@ ExprPtr Parser::primary()
 
 	if (match({NUMBER, STRING}))
 		return make_unique<Literal>(previous().literal);
+
+	if (match({THIS}))
+		return make_unique<This>(previous());
 
 	if (match({IDENTIFIER}))
 		return make_unique<Variable>(previous());
