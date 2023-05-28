@@ -177,6 +177,30 @@ void Interpreter::visit_class_stmt(const Class &stmt)
 {
 	environment->define(stmt.name.lexeme, nullptr);
 
+	// If a superclass name exists and it is an Object of type LoxClass
+	LoxClassPtr superclass = nullptr;
+	if (stmt.superclass != nullptr) {
+		auto maybe_class = evaluate(*stmt.superclass);
+		if (match_types<LoxClassPtr>(maybe_class)) {
+			superclass = get<LoxClassPtr>(maybe_class);
+		} else {
+			throw RuntimeError(
+				stmt.superclass->name, "Superclass must be a class."
+			);
+		}
+	}
+
+	// The enclosing environment in which 'super' is defined always remains
+	// the same because it only used to access methods and methods remain the
+	// same for every instance of a class, unlike instance's data-fields.
+	if (stmt.superclass != nullptr) {
+		environment = make_shared<Environment>(environment);
+		environment->define("super", superclass);
+	}
+
+	// A new enclosing environment is created and 'this' defined in that
+	// when we access the method of an instance, and not here.
+	// Since every instances do not share data-fields.
 	ClassMethodMap methods;
 	for (auto &method : stmt.methods) {
 		bool is_init = method.name.lexeme == "init";
@@ -186,8 +210,15 @@ void Interpreter::visit_class_stmt(const Class &stmt)
 		});
 	}
 
-	auto klass = make_shared<LoxClass>(stmt.name.lexeme, std::move(methods));
+	auto klass = make_shared<LoxClass>(
+		stmt.name.lexeme, std::move(superclass), std::move(methods)
+	);
 	klass->self_ptr = klass;
+
+	// Pop the environment in which 'super' was defined.
+	if (stmt.superclass != nullptr)
+		environment = environment->encolsing;
+
 	environment->assign(stmt.name, std::move(klass));
 }
 
@@ -249,6 +280,26 @@ Object Interpreter::visit_set_expr(const Set &expr)
 	auto value = evaluate(*expr.value);
 	get<LoxInstancePtr>(object)->set(expr.name, value);
 	return value;
+}
+
+Object Interpreter::visit_super_expr(const Super &expr)
+{
+	auto distance = locals.at(&expr);
+	auto superclass = get<LoxClassPtr>(environment->get_at(distance, "super"));
+	// 'this' resides inside the scope which is nested inside the scope
+	// in which 'super' resides.
+	auto object =
+		get<LoxInstancePtr>(environment->get_at(distance - 1, "this"));
+
+	auto method = superclass->find_method(expr.method.lexeme);
+	if (method == nullptr) {
+		throw RuntimeError(
+			expr.method,
+			std::format("Undefined property '{}'", expr.method.lexeme)
+		);
+	}
+
+	return method->bind(std::move(object));
 }
 
 Object Interpreter::visit_this_expr(const This &expr)
@@ -377,7 +428,7 @@ void Interpreter::execute_block(
 	auto restore_environment = [&] {
 		// Clear the environment values before removing it
 		// this prevents cyclic-references which causes memory leaks
-		environment->clear();
+		environment->values.clear();
 		environment = std::move(previous);
 	};
 
@@ -392,12 +443,7 @@ void Interpreter::execute_block(
 	} catch (RuntimeError &err) {
 		environment = previous;
 		throw err;
-	}
-	// Here, we are not subclassing all control-flow exceptions under
-	// a single base-class and using that to catch all subclasses.
-	// Because, then if we will rethrow the exception we will lose the type
-	// of the subclass and things will get complicated. So, just keep it simple.
-	catch (ControlBreak &err) {
+	} catch (ControlBreak &err) {
 		restore_environment();
 		throw err;
 	} catch (ControlContinue &err) {

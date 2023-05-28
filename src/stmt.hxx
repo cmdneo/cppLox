@@ -225,8 +225,12 @@ struct Function : public Stmt {
 };
 
 struct Class : public Stmt {
-	Class(const Token &name_, std::vector<Function> methods_)
+	Class(
+		const Token &name_, std::unique_ptr<Variable> superclass_,
+		std::vector<Function> methods_
+	)
 		: name(name_)
+		, superclass(std::move(superclass_))
 		, methods(std::move(methods_))
 	{
 	}
@@ -234,6 +238,7 @@ struct Class : public Stmt {
 	void accept(StmtVisitor &visitor) { visitor.visit_class_stmt(*this); }
 
 	Token name;
+	std::unique_ptr<Variable> superclass;
 	std::vector<Function> methods;
 };
 

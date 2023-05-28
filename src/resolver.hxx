@@ -51,7 +51,22 @@ public:
 		declare(stmt.name);
 		define(stmt.name);
 
-		begin_scope();
+		if (stmt.superclass != nullptr
+			&& stmt.name.lexeme == stmt.superclass->name.lexeme) {
+			print_error(
+				stmt.superclass->name, "A class can't inherit from itself."
+			);
+		}
+
+		// Put the 'super' in a new scope enclosing the scope of all methods
+		if (stmt.superclass != nullptr) {
+			current_class = ClassType::Subclass;
+			resolve(*stmt.superclass);
+			begin_scope();
+			scopes.back()["super"] = true;
+		}
+
+		begin_scope(); // Start scope of 'this' enclosing all methods
 		scopes.back()["this"] = true;
 
 		for (auto &method : stmt.methods) {
@@ -63,7 +78,12 @@ public:
 			resolve_function(method, declaration);
 		}
 
-		end_scope();
+		end_scope(); // End scope of 'this'
+
+		// End scope of 'super'
+		if (stmt.superclass != nullptr)
+			end_scope();
+
 		current_class = enclosing_class;
 	}
 
@@ -199,6 +219,20 @@ public:
 		return nullptr;
 	}
 
+	Object visit_super_expr(const Super &expr) override
+	{
+		if (current_class == ClassType::None) {
+			print_error(expr.keyword, "Can't use 'super' outside of a class.");
+		} else if (current_class != ClassType::Subclass) {
+			print_error(
+				expr.keyword, "Can't use 'super' in a class with no superclass."
+			);
+		}
+
+		resolve_local(expr, expr.keyword);
+		return nullptr;
+	}
+
 	Object visit_this_expr(const This &expr) override
 	{
 		if (current_class == ClassType::None) {
@@ -225,7 +259,7 @@ public:
 	Object visit_literal_expr(const Literal &) override { return nullptr; }
 
 private:
-	enum class ClassType { None, Class };
+	enum class ClassType { None, Class, Subclass };
 	enum class FunctionType { None, Function, Initializer, Method };
 	enum class LoopType { None, While };
 

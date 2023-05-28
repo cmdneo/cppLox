@@ -79,6 +79,13 @@ StmtPtr Parser::declaration()
 StmtPtr Parser::class_declaration()
 {
 	auto name = consume(IDENTIFIER, "Expect class name.");
+
+	std::unique_ptr<Variable> superclass = nullptr;
+	if (match({LESS})) {
+		consume(IDENTIFIER, "Expect superclass name.");
+		superclass = make_unique<Variable>(previous());
+	}
+
 	consume(LEFT_BRACE, "Expect '{' before class body.");
 
 	std::vector<Function> methods;
@@ -86,7 +93,8 @@ StmtPtr Parser::class_declaration()
 		methods.push_back(function("method"));
 
 	consume(RIGHT_BRACE, "Expect '}' after class body.");
-	return make_unique<Class>(name, std::move(methods));
+
+	return make_unique<Class>(name, std::move(superclass), std::move(methods));
 }
 
 Function Parser::function(std::string_view kind)
@@ -388,14 +396,21 @@ ExprPtr Parser::primary()
 	if (match({NIL}))
 		return make_unique<Literal>(nullptr);
 
-	if (match({NUMBER, STRING}))
-		return make_unique<Literal>(previous().literal);
-
 	if (match({THIS}))
 		return make_unique<This>(previous());
 
+	if (match({NUMBER, STRING}))
+		return make_unique<Literal>(previous().literal);
+
 	if (match({IDENTIFIER}))
 		return make_unique<Variable>(previous());
+
+	if (match({SUPER})) {
+		auto keyword = previous();
+		consume(DOT, "Expect '.' after 'super'.");
+		auto method = consume(IDENTIFIER, "Expect superclass method name.");
+		return make_unique<Super>(keyword, method);
+	}
 
 	if (match({LEFT_PAREN})) {
 		auto expr = expression();

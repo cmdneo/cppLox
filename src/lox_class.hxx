@@ -21,8 +21,12 @@ using ClassMethodMap = std::map<const std::string, LoxFunctionPtr>;
 class LoxClass : public LoxCallable
 {
 public:
-	LoxClass(const std::string &name_, ClassMethodMap methods_)
+	LoxClass(
+		const std::string &name_, LoxClassPtr superclass_,
+		ClassMethodMap methods_
+	)
 		: name(name_)
+		, superclass(std::move(superclass_))
 		, methods(std::move(methods_))
 	{
 	}
@@ -32,6 +36,10 @@ public:
 		auto result = methods.find(method_name);
 		if (result != methods.end())
 			return result->second;
+
+		if (superclass != nullptr)
+			return superclass->find_method(method_name);
+
 		return nullptr;
 	}
 
@@ -54,6 +62,7 @@ public:
 	std::string name;
 
 private:
+	LoxClassPtr superclass;
 	ClassMethodMap methods;
 };
 

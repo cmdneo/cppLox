@@ -1,6 +1,7 @@
 #ifndef ENVIRONMENT_HXX_INCLUDED
 #define ENVIRONMENT_HXX_INCLUDED
 
+#include <cassert>
 #include <format>
 #include <map>
 #include <memory>
@@ -15,6 +16,8 @@ using EnvironmentPtr = std::shared_ptr<Environment>;
 
 class Environment
 {
+	friend class Interpreter;
+
 public:
 	Environment(EnvironmentPtr encolsing_env = nullptr)
 		: encolsing(encolsing_env)
@@ -74,13 +77,13 @@ public:
 		ancestor(*this, distance).values.at(name.lexeme) = value;
 	}
 
-	void clear() { values.clear(); }
-
 private:
 	static Environment &ancestor(Environment &env, int distance)
 	{
 		if (distance == 0)
 			return env;
+
+		assert(env.encolsing != nullptr);
 		return ancestor(*env.encolsing, distance - 1);
 	}
 

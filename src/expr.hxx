@@ -17,6 +17,7 @@ struct Binary;
 struct Call;
 struct Get;
 struct Set;
+struct Super;
 struct This;
 struct Grouping;
 struct Literal;
@@ -33,6 +34,7 @@ struct ExprVisitor {
 	virtual Object visit_call_expr(const Call &expr) = 0;
 	virtual Object visit_get_expr(const Get &expr) = 0;
 	virtual Object visit_set_expr(const Set &expr) = 0;
+	virtual Object visit_super_expr(const Super &expr) = 0;
 	virtual Object visit_this_expr(const This &expr) = 0;
 	virtual Object visit_grouping_expr(const Grouping &expr) = 0;
 	virtual Object visit_literal_expr(const Literal &expr) = 0;
@@ -166,6 +168,22 @@ struct Set : public Expr {
 	ExprPtr object;
 	Token name;
 	ExprPtr value;
+};
+
+struct Super : public Expr {
+	Super(const Token &keyword_, const Token &method_)
+		: keyword(keyword_)
+		, method(method_)
+	{
+	}
+
+	Object accept(ExprVisitor &visitor) override
+	{
+		return visitor.visit_super_expr(*this);
+	}
+
+	Token keyword;
+	Token method;
 };
 
 struct This : public Expr {

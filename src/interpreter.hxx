@@ -42,6 +42,7 @@ public:
 	Object visit_get_expr(const Get &expr) override;
 	Object visit_set_expr(const Set &expr) override;
 	Object visit_this_expr(const This &expr) override;
+	Object visit_super_expr(const Super &expr) override;
 	Object visit_unary_expr(const Unary &expr) override;
 	Object visit_binary_expr(const Binary &expr) override;
 	Object visit_logical_expr(const Logical &expr) override;
