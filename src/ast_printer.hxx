@@ -21,8 +21,17 @@ struct AstPrinter : public ExprVisitor {
 		return parenthesize({
 			"?:",
 			print(*expr.condition),
-			print(*expr.expr1),
-			print(*expr.expr2),
+			print(*expr.true_expr),
+			print(*expr.false_expr),
+		});
+	}
+
+	Object visit_logical_expr(const Logical &expr) override
+	{
+		return parenthesize({
+			std::string(expr.operat.lexeme),
+			print(*expr.left),
+			print(*expr.left),
 		});
 	}
 
@@ -48,6 +57,32 @@ struct AstPrinter : public ExprVisitor {
 			print(*expr.callee) + ":",
 			args,
 		});
+	}
+
+	Object visit_get_expr(const Get &expr) override
+	{
+		return parenthesize({
+			"get",
+			print(*expr.object),
+			expr.name.lexeme,
+		});
+	}
+
+	Object visit_set_expr(const Set &expr) override
+	{
+		return parenthesize({
+			"set",
+			print(*expr.object),
+			expr.name.lexeme,
+			print(*expr.value),
+		});
+	}
+
+	Object visit_this_expr(const This &) override { return "this"; }
+
+	Object visit_super_expr(const Super &expr) override
+	{
+		return "super." + expr.method.lexeme;
 	}
 
 	Object visit_grouping_expr(const Grouping &expr) override
