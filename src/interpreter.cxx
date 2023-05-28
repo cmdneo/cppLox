@@ -425,11 +425,19 @@ void Interpreter::execute_block(
 )
 {
 	auto previous = std::move(environment);
+
+	// We do not pop the environment before running the GC, because
+	// the environment still may have Objects(that is LoxFunctions)
+	// which refer to an enclosing environment.
+	// If we pop the environment then the environments referred-to by the objects
+	// in this environment may not get marked, which will result in clearing
+	// those environments wrongly by the GC, but when returned those objects
+	// will refer to a cleared environment and they(that is closures) may not
+	// find the variables they expect to find in their enclosing scope.
 	auto restore_environment = [&] {
-		environment = std::move(previous);
-		// Pop the current environment from the garbage collector and run it.
-		garbage_collector.pop_environment();
 		garbage_collector.collect();
+		garbage_collector.pop_environment();
+		environment = std::move(previous);
 	};
 
 	// Tell the garbage collector that the current environment is directly reachable
@@ -453,11 +461,6 @@ void Interpreter::execute_block(
 		restore_environment();
 		throw err;
 	} catch (ControlReturn &err) {
-		// TODO Find a better way to do this!
-		// Objects returned from a function can have environments
-		// but they are not bound to any variable yet(as no assingment is done),
-		// so mark then as reachable too for this round.
-		garbage_collector.mark_reachable_from_object(err.value);
 		restore_environment();
 		throw err;
 	}

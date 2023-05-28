@@ -56,6 +56,26 @@ public:
 			is_reachable = false;
 	}
 
+private:
+	void mark_reachable(const std::weak_ptr<Environment> &environment)
+	{
+		// The environments containing 'this' and 'super' are not tracked here
+		auto result = environments.find(environment);
+		if (result != environments.end()) {
+
+			// Indirectly reachable environments are also always valid,
+			// so no need to check before locking
+			auto env = result->first.lock();
+			result->second = true;
+
+			if (env->enclosing != nullptr)
+				mark_reachable(env->enclosing);
+
+			for (auto &[name, object] : env->values)
+				mark_reachable_from_object(object);
+		}
+	}
+
 	void mark_reachable_from_object(Object &object)
 	{
 		// Function objects have environments
@@ -77,26 +97,6 @@ public:
 		else if (match_types<LoxInstancePtr>(object)) {
 			for (auto &[name, obj] : std::get<LoxInstancePtr>(object)->fields)
 				mark_reachable_from_object(obj);
-		}
-	}
-
-private:
-	void mark_reachable(const std::weak_ptr<Environment> &environment)
-	{
-		// The environments containing 'this' and 'super' are not tracked here
-		auto result = environments.find(environment);
-		if (result != environments.end()) {
-
-			// Indirectly reachable environments are also always valid,
-			// so no need to check before locking
-			auto env = result->first.lock();
-			result->second = true;
-
-			if (env->enclosing != nullptr)
-				mark_reachable(env->enclosing);
-
-			for (auto &[name, object] : env->values)
-				mark_reachable_from_object(object);
 		}
 	}
 
