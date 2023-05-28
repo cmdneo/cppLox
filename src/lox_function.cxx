@@ -28,3 +28,15 @@ LoxFunction::call(Interpreter &interpreter, std::vector<Object> &arguments)
 		return closure->get_at(0, "this");
 	return nullptr;
 }
+
+LoxFunctionPtr LoxFunction::bind(LoxInstancePtr instance)
+{
+	// Create a new environment whithin the method closure
+	auto environment = std::make_shared<Environment>(closure);
+	// and bind 'this' to the instance passed
+	environment->define("this", std::move(instance));
+
+	return std::make_unique<LoxFunction>(
+		declaration, std::move(environment), is_initializer
+	);
+}

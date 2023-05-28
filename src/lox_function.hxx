@@ -18,8 +18,6 @@ using LoxFunctionPtr = std::shared_ptr<LoxFunction>;
 
 class LoxFunction : public LoxCallable
 {
-	friend class LoxClass;
-
 public:
 	LoxFunction(
 		const Function &declaration_, EnvironmentPtr closure_,
@@ -41,21 +39,12 @@ public:
 	Object
 	call(Interpreter &interpreter, std::vector<Object> &arguments) override;
 
-	LoxFunctionPtr bind(LoxInstancePtr instance)
-	{
-		// Create a new environment whithin the method closure
-		auto environment = std::make_shared<Environment>(closure);
-		// and bind 'this' to the instance passed
-		environment->define("this", std::move(instance));
+	LoxFunctionPtr bind(LoxInstancePtr instance);
 
-		return std::make_unique<LoxFunction>(
-			declaration, std::move(environment), is_initializer
-		);
-	}
+	EnvironmentPtr closure;
 
 private:
 	Function declaration;
-	EnvironmentPtr closure;
 	bool is_initializer = false;
 };
 
