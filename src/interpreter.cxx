@@ -217,7 +217,7 @@ void Interpreter::visit_class_stmt(const Class &stmt)
 
 	// Pop the environment in which 'super' was defined.
 	if (stmt.superclass != nullptr)
-		environment = environment->encolsing;
+		environment = environment->enclosing;
 
 	environment->assign(stmt.name, std::move(klass));
 }
@@ -426,11 +426,14 @@ void Interpreter::execute_block(
 {
 	auto previous = std::move(environment);
 	auto restore_environment = [&] {
-		// Clear the environment values before removing it
-		// this prevents cyclic-references which causes memory leaks
-		environment->values.clear();
 		environment = std::move(previous);
+		// Pop the current environment from the garbage collector and run it.
+		garbage_collector.pop_environment();
+		garbage_collector.collect();
 	};
+
+	// Tell the garbage collector that the current environment is directly reachable
+	garbage_collector.push_environment(block_environ);
 
 	// If any expected exceptions are encountered, then handle them,
 	// restore the environment and then rethrow the handeled exception.
@@ -450,6 +453,11 @@ void Interpreter::execute_block(
 		restore_environment();
 		throw err;
 	} catch (ControlReturn &err) {
+		// TODO Find a better way to do this!
+		// Objects returned from a function can have environments
+		// but they are not bound to any variable yet(as no assingment is done),
+		// so mark then as reachable too for this round.
+		garbage_collector.mark_reachable_from_object(err.value);
 		restore_environment();
 		throw err;
 	}

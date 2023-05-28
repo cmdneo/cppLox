@@ -15,6 +15,8 @@
 // Assign the shared_ptr created to the self_ptr field of this class.
 class LoxInstance
 {
+	friend class GarbageCollector;
+
 public:
 	LoxInstance(LoxClassPtr klass_)
 		: klass(std::move(klass_))

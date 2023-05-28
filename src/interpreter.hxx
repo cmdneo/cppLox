@@ -13,6 +13,7 @@
 #include "expr.hxx"
 #include "stmt.hxx"
 #include "environment.hxx"
+#include "garbage.hxx"
 
 class Interpreter : private ExprVisitor, private StmtVisitor
 {
@@ -87,6 +88,7 @@ private:
 	EnvironmentPtr globals = std::make_shared<Environment>();
 	EnvironmentPtr environment = globals;
 	std::map<const Expr *, int> locals;
+	GarbageCollector garbage_collector{globals};
 };
 
 #endif

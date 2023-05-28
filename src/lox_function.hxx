@@ -23,8 +23,8 @@ public:
 		const Function &declaration_, EnvironmentPtr closure_,
 		bool is_init = false
 	)
-		: declaration(declaration_)
-		, closure(std::move(closure_))
+		: closure(std::move(closure_))
+		, declaration(declaration_)
 		, is_initializer(is_init)
 	{
 	}

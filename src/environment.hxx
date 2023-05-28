@@ -16,11 +16,11 @@ using EnvironmentPtr = std::shared_ptr<Environment>;
 
 class Environment
 {
-	friend class Interpreter;
+	friend class GarbageCollector;
 
 public:
 	Environment(EnvironmentPtr encolsing_env = nullptr)
-		: encolsing(encolsing_env)
+		: enclosing(encolsing_env)
 	{
 	}
 
@@ -37,8 +37,8 @@ public:
 			return;
 		}
 
-		if (encolsing != nullptr) {
-			encolsing->assign(name, value);
+		if (enclosing != nullptr) {
+			enclosing->assign(name, value);
 			return;
 		}
 
@@ -53,8 +53,8 @@ public:
 		if (result != values.end())
 			return result->second;
 
-		if (encolsing != nullptr)
-			return encolsing->get(name);
+		if (enclosing != nullptr)
+			return enclosing->get(name);
 
 		throw RuntimeError(
 			name, std::format("Undefined variable '{}'.", name.lexeme)
@@ -77,18 +77,19 @@ public:
 		ancestor(*this, distance).values.at(name.lexeme) = value;
 	}
 
+	EnvironmentPtr enclosing;
+
 private:
 	static Environment &ancestor(Environment &env, int distance)
 	{
 		if (distance == 0)
 			return env;
 
-		assert(env.encolsing != nullptr);
-		return ancestor(*env.encolsing, distance - 1);
+		assert(env.enclosing != nullptr);
+		return ancestor(*env.enclosing, distance - 1);
 	}
 
 	std::map<const std::string, Object> values;
-	EnvironmentPtr encolsing;
 };
 
 #endif
