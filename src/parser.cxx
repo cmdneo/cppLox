@@ -457,8 +457,9 @@ void Parser::synchronize()
 		case FOR:
 		case IF:
 		case WHILE:
-		case PRINT:
 		case RETURN:
+		case PRINT:
+		case ASSERT:
 			return;
 
 		default:

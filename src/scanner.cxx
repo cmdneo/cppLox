@@ -71,7 +71,6 @@ void Scanner::do_string()
 
 void Scanner::scan_token()
 {
-
 	char c = advance();
 	switch (c) {
 	case '(':
@@ -149,7 +148,6 @@ void Scanner::scan_token()
 			do_identifier();
 		else
 			print_error(line, std::format("Unexpected character '{}'.", c));
-
 		break;
 	}
 }

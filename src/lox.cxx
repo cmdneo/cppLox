@@ -70,8 +70,10 @@ void run_prompt()
 void run_file(string path)
 {
 	std::ifstream infile(path);
-	if (!infile)
-		return;
+	if (!infile) {
+		std::clog << "Cannot open file: " << path << "\n";
+		std::exit(EXIT_FAILURE);
+	}
 
 	string source(std::istreambuf_iterator<char>(infile), {});
 	run_lox_interpreter(source);
