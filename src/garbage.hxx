@@ -2,6 +2,7 @@
 #define GARBAGE_HXX_INCLUDED
 
 #include <cassert>
+#include <chrono>
 #include <initializer_list>
 #include <map>
 #include <memory>
@@ -12,6 +13,8 @@
 #include "lox_function.hxx"
 #include "lox_instance.hxx"
 #include "environment.hxx"
+
+static constexpr std::chrono::milliseconds GC_RUN_INTERVAL{100};
 
 class GarbageCollector
 {
@@ -34,6 +37,13 @@ public:
 
 	void collect()
 	{
+		// Since it is called after exection of every block,
+		// therefore, run it only after a fixed time interval.
+		auto interval = clock::now() - last_run_at;
+		last_run_at = clock::now();
+		if (interval < GC_RUN_INTERVAL)
+			return;
+
 		// Follow the chain from directly-reachable environments
 		// and mark all which are reachable
 		for (auto &env : directly_reachable)
@@ -109,6 +119,10 @@ private:
 	// they are direclty reachable because they can be found via
 	// traversing the environment chain upwards and they are always valid.
 	std::vector<std::weak_ptr<Environment>> directly_reachable;
+
+	using clock = std::chrono::steady_clock;
+	// Last time the GC was run
+	clock::time_point last_run_at = clock::now();
 };
 
 #endif
