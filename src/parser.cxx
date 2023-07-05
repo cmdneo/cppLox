@@ -45,7 +45,7 @@ std::vector<StmtPtr> Parser::parse()
 	while (!is_at_end()) {
 		try {
 			statements.push_back(declaration());
-		} catch (ParseError &e) {
+		} catch (ParseError e) {
 			return {};
 		}
 	}
@@ -67,7 +67,7 @@ StmtPtr Parser::declaration()
 			return var_declaration();
 
 		return statement();
-	} catch (ParseError &) {
+	} catch (ParseError) {
 		synchronize();
 		return nullptr;
 	}

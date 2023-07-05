@@ -39,11 +39,20 @@ public:
 	{
 		// Since it is called after exection of every block,
 		// therefore, run it only after a fixed time interval.
+		// If the program ends before GC is run then also its okay.
 		auto interval = clock::now() - last_run_at;
 		last_run_at = clock::now();
 		if (interval < GC_RUN_INTERVAL)
 			return;
+		
+		collect_impl();
 
+	}
+
+	//~GarbageCollector() { collect_impl(); }
+
+private:
+	void collect_impl() {
 		// Follow the chain from directly-reachable environments
 		// and mark all which are reachable
 		for (auto &env : directly_reachable)
@@ -64,9 +73,9 @@ public:
 		// Mark all as unreachable for the next round
 		for (auto &[env, is_reachable] : environments)
 			is_reachable = false;
+	
 	}
 
-private:
 	void mark_reachable(const std::weak_ptr<Environment> &environment)
 	{
 		// The environments containing 'this' and 'super' are not tracked here

@@ -18,7 +18,7 @@ LoxFunction::call(Interpreter &interpreter, std::vector<Object> &arguments)
 
 	try {
 		interpreter.execute_block(*declaration.body, std::move(environment));
-	} catch (Interpreter::ControlReturn &return_value) {
+	} catch (Interpreter::ControlReturn return_value) {
 		if (is_initializer)
 			return closure->get_at(0, "this");
 		return return_value.value;

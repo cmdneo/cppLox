@@ -92,9 +92,9 @@ void Interpreter::interpret(std::vector<StmtPtr> statements)
 	try {
 		for (auto &stmt : statements)
 			execute(*stmt);
-	} catch (RuntimeError &err) {
+	} catch (RuntimeError err) {
 		print_runtime_error(err);
-	} catch (NativeFnError &err) {
+	} catch (NativeFnError err) {
 		print_nativefn_error(err);
 	}
 }
@@ -450,16 +450,16 @@ void Interpreter::execute_block(
 
 		for (const auto &stmt : statements)
 			execute(*stmt);
-	} catch (RuntimeError &err) {
+	} catch (RuntimeError err) {
 		environment = previous;
 		throw err;
-	} catch (ControlBreak &err) {
+	} catch (ControlBreak err) {
 		restore_environment();
 		throw err;
-	} catch (ControlContinue &err) {
+	} catch (ControlContinue err) {
 		restore_environment();
 		throw err;
-	} catch (ControlReturn &err) {
+	} catch (ControlReturn err) {
 		restore_environment();
 		throw err;
 	}
