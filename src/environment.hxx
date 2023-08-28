@@ -90,6 +90,8 @@ private:
 	}
 
 	std::map<const std::string, Object> values;
+	// For mark and sweep garbage collector
+	bool reachable = false;
 };
 
 #endif

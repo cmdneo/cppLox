@@ -8,6 +8,7 @@
 #include <memory>
 #include <vector>
 #include <variant>
+#include <utility>
 
 #include "object.hxx"
 #include "lox_function.hxx"
@@ -22,14 +23,14 @@ public:
 	GarbageCollector(std::initializer_list<EnvironmentPtr> environs)
 	{
 		for (auto &env : environs) {
-			environments.insert({env, false});
+			environments.push_back(env);
 			directly_reachable.push_back(env);
 		}
 	}
 
 	void push_environment(const EnvironmentPtr &environment)
 	{
-		environments.insert({environment, false});
+		environments.push_back(environment);
 		directly_reachable.push_back(environment);
 	}
 
@@ -44,55 +45,64 @@ public:
 		last_run_at = clock::now();
 		if (interval < GC_RUN_INTERVAL)
 			return;
-		
-		collect_impl();
 
+		collect_impl();
 	}
 
 	//~GarbageCollector() { collect_impl(); }
 
 private:
-	void collect_impl() {
+	void collect_impl()
+	{
 		// Follow the chain from directly-reachable environments
 		// and mark all which are reachable
 		for (auto &env : directly_reachable)
 			mark_reachable(env);
 
+		auto swap_remove = [](auto vec, unsigned remove_at,
+							  unsigned swap_with) {
+			using std::swap;
+			swap(vec[remove_at], vec[swap_with]);
+			vec.pop_back();
+		};
+
 		// Clear out unreachable environments
-		for (auto &[env, is_reachable] : environments) {
-			if (env.expired()) {
-				environments.erase(env);
-				continue;
-			}
-			if (is_reachable == false) {
-				env.lock()->values.clear();
-				environments.erase(env);
+		int length = environments.size();
+		for (int i = 0; i < length;) {
+			if (environments[i].expired()) {
+				length -= 1;
+				swap_remove(environments, i, length);
+			} else if (auto locked = environments[i].lock();
+					   !locked->reachable) {
+				length -= 1;
+				locked->values.clear();
+				swap_remove(environments, i, length);
+			} else {
+				// Only move to next if current one was not removed
+				// as when removed it is substituted with the last entry.
+				// So we would like to visit that substituted entry too.
+				++i;
 			}
 		}
 
 		// Mark all as unreachable for the next round
-		for (auto &[env, is_reachable] : environments)
-			is_reachable = false;
-	
+		for (auto &env : environments)
+			env.lock()->reachable = false;
 	}
 
 	void mark_reachable(const std::weak_ptr<Environment> &environment)
 	{
 		// The environments containing 'this' and 'super' are not tracked here
-		auto result = environments.find(environment);
-		if (result != environments.end()) {
+		// Indirectly reachable environments are also always valid,
+		// so no need to check before locking
+		auto env = environment.lock();
+		env->reachable = true;
 
-			// Indirectly reachable environments are also always valid,
-			// so no need to check before locking
-			auto env = result->first.lock();
-			result->second = true;
+		if (env->enclosing != nullptr)
+			mark_reachable(env->enclosing);
 
-			if (env->enclosing != nullptr)
-				mark_reachable(env->enclosing);
-
-			for (auto &[name, object] : env->values)
-				mark_reachable_from_object(object);
-		}
+		for (auto &[name, object] : env->values)
+			mark_reachable_from_object(object);
 	}
 
 	void mark_reachable_from_object(Object &object)
@@ -106,8 +116,7 @@ private:
 			auto env = dynamic_cast<LoxFunction &>(callable).closure;
 
 			// If already visited, then return
-			auto result = environments.find(env);
-			if (result != environments.end() && result->second == true)
+			if (env->reachable)
 				return;
 
 			mark_reachable(env);
@@ -120,10 +129,7 @@ private:
 	}
 
 	// Maps environment to whether are they reachable or not
-	std::map<
-		std::weak_ptr<Environment>, bool,
-		std::owner_less<std::weak_ptr<Environment>>>
-		environments;
+	std::vector<std::weak_ptr<Environment>> environments;
 	// Environments that enclose the currently active environment,
 	// they are direclty reachable because they can be found via
 	// traversing the environment chain upwards and they are always valid.
