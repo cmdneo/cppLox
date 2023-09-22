@@ -38,14 +38,8 @@ public:
 
 	void collect()
 	{
-		// Since it is called after exection of every block,
-		// therefore, run it only after a fixed time interval.
-		// If the program ends before GC is run then also its okay.
-		auto interval = clock::now() - last_run_at;
-		last_run_at = clock::now();
-		if (interval < GC_RUN_INTERVAL)
-			return;
-
+		// The timer was removed, because it caused a lot of page faults,
+		// IDK why :|
 		collect_impl();
 	}
 
@@ -59,7 +53,7 @@ private:
 		for (auto &env : directly_reachable)
 			mark_reachable(env);
 
-		auto swap_remove = [](auto vec, unsigned remove_at,
+		auto swap_remove = [](auto &vec, unsigned remove_at,
 							  unsigned swap_with) {
 			using std::swap;
 			swap(vec[remove_at], vec[swap_with]);
