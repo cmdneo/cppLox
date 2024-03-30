@@ -178,7 +178,8 @@ void Interpreter::visit_class_stmt(const Class &stmt)
 
 	// If a superclass name exists and it is an Object of type LoxClass
 	LoxClassPtr superclass = nullptr;
-	if (stmt.superclass != nullptr) {
+	if (stmt.superclass) {
+		// Using const-cast is OK since evaluate
 		auto maybe_class = evaluate(*stmt.superclass);
 		if (match_types<LoxClassPtr>(maybe_class)) {
 			superclass = get<LoxClassPtr>(maybe_class);
@@ -192,14 +193,14 @@ void Interpreter::visit_class_stmt(const Class &stmt)
 	// The enclosing environment in which 'super' is defined always remains
 	// the same because it only used to access methods and methods remain the
 	// same for every instance of a class, unlike instance's data-fields.
-	if (stmt.superclass != nullptr) {
+	if (stmt.superclass) {
 		environment = make_shared<Environment>(environment);
 		environment->define("super", superclass);
 	}
 
-	// A new enclosing environment is created and 'this' defined in that
-	// when we access the method of an instance, and not here.
-	// Since every instances do not share data-fields.
+	// A new enclosing environment is created and 'this' is defined in that
+	// and bound to the method of the instance we access. We do this because
+	// instances do not share data, so they need their own environment.
 	ClassMethodMap methods;
 	for (auto &method : stmt.methods) {
 		bool is_init = method.name.lexeme == "init";
@@ -215,7 +216,7 @@ void Interpreter::visit_class_stmt(const Class &stmt)
 	klass->self_ptr = klass;
 
 	// Pop the environment in which 'super' was defined.
-	if (stmt.superclass != nullptr)
+	if (stmt.superclass)
 		environment = environment->enclosing;
 
 	environment->assign(stmt.name, std::move(klass));
@@ -285,7 +286,7 @@ Object Interpreter::visit_super_expr(const Super &expr)
 {
 	auto distance = locals.at(&expr);
 	auto superclass = get<LoxClassPtr>(environment->get_at(distance, "super"));
-	// 'this' resides inside the scope which is nested inside the scope
+	// 'this' resides in the scope which is nested inside the scope
 	// in which 'super' resides.
 	auto object =
 		get<LoxInstancePtr>(environment->get_at(distance - 1, "this"));
@@ -426,8 +427,8 @@ void Interpreter::execute_block(
 	auto previous = std::move(environment);
 
 	// We do not pop the environment before running the GC, because
-	// the environment still may have Objects(that is LoxFunctions)
-	// which refer to an enclosing environment.
+	// the environment mat still have Objects(that is LoxFunctions)
+	// (as return values) which refer to an enclosing environment.
 	// If we pop the environment then the environments referred-to by the objects
 	// in this environment may not get marked, which will result in clearing
 	// those environments wrongly by the GC, but when returned those objects

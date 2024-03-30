@@ -3,6 +3,7 @@
 
 #include <memory>
 #include <utility>
+#include <optional>
 #include <vector>
 
 #include "expr.hxx"
@@ -40,7 +41,7 @@ struct StmtVisitor {
 };
 
 struct Stmt {
-	virtual void accept(StmtVisitor &visitor) = 0;
+	virtual void accept(StmtVisitor &visitor) const = 0;
 	virtual ~Stmt() = default;
 };
 
@@ -50,7 +51,7 @@ struct Block : public Stmt {
 	{
 	}
 
-	void accept(StmtVisitor &visitor) override
+	void accept(StmtVisitor &visitor) const override
 	{
 		visitor.visit_block_stmt(*this);
 	}
@@ -73,7 +74,7 @@ struct Expression : public Stmt {
 	{
 	}
 
-	void accept(StmtVisitor &visitor) override
+	void accept(StmtVisitor &visitor) const override
 	{
 		visitor.visit_expr_stmt(*this);
 	}
@@ -87,7 +88,7 @@ struct Print : public Stmt {
 	{
 	}
 
-	void accept(StmtVisitor &visitor) override
+	void accept(StmtVisitor &visitor) const override
 	{
 		visitor.visit_print_stmt(*this);
 	}
@@ -102,7 +103,7 @@ struct Assert : public Stmt {
 	{
 	}
 
-	void accept(StmtVisitor &visitor) override
+	void accept(StmtVisitor &visitor) const override
 	{
 		visitor.visit_assert_stmt(*this);
 	}
@@ -118,7 +119,7 @@ struct Break : public Stmt {
 	{
 	}
 
-	void accept(StmtVisitor &visitor) override
+	void accept(StmtVisitor &visitor) const override
 	{
 		visitor.visit_break_stmt(*this);
 	}
@@ -132,7 +133,7 @@ struct Continue : public Stmt {
 	{
 	}
 
-	void accept(StmtVisitor &visitor) override
+	void accept(StmtVisitor &visitor) const override
 	{
 		visitor.visit_continue_stmt(*this);
 	}
@@ -147,7 +148,7 @@ struct Return : public Stmt {
 	{
 	}
 
-	void accept(StmtVisitor &visitor) override
+	void accept(StmtVisitor &visitor) const override
 	{
 		visitor.visit_return_stmt(*this);
 	}
@@ -164,7 +165,10 @@ struct If : public Stmt {
 	{
 	}
 
-	void accept(StmtVisitor &visitor) override { visitor.visit_if_stmt(*this); }
+	void accept(StmtVisitor &visitor) const override
+	{
+		visitor.visit_if_stmt(*this);
+	}
 
 	ExprPtr condition;
 	StmtPtr then_branch;
@@ -178,7 +182,7 @@ struct While : public Stmt {
 	{
 	}
 
-	void accept(StmtVisitor &visitor) override
+	void accept(StmtVisitor &visitor) const override
 	{
 		visitor.visit_while_stmt(*this);
 	}
@@ -194,7 +198,7 @@ struct Var : public Stmt {
 	{
 	}
 
-	void accept(StmtVisitor &visitor) override
+	void accept(StmtVisitor &visitor) const override
 	{
 		visitor.visit_var_stmt(*this);
 	}
@@ -214,31 +218,34 @@ struct Function : public Stmt {
 	{
 	}
 
-	void accept(StmtVisitor &visitor) { visitor.visit_function_stmt(*this); }
+	void accept(StmtVisitor &visitor) const override
+	{
+		visitor.visit_function_stmt(*this);
+	}
 
 	Token name;
 	std::vector<Token> params;
-	// LoxFunction also needs the function body AST,
-	// so instead of copying the AST which will be very complicated.
-	// Use shared_ptr to share the reference to the AST which was constructed.
 	std::shared_ptr<std::vector<StmtPtr>> body;
 };
 
 struct Class : public Stmt {
 	Class(
-		const Token &name_, std::unique_ptr<Variable> superclass_,
+		const Token &name_, std::optional<Variable> superclass_,
 		std::vector<Function> methods_
 	)
 		: name(name_)
-		, superclass(std::move(superclass_))
+		, superclass(superclass_)
 		, methods(std::move(methods_))
 	{
 	}
 
-	void accept(StmtVisitor &visitor) { visitor.visit_class_stmt(*this); }
+	void accept(StmtVisitor &visitor) const override
+	{
+		visitor.visit_class_stmt(*this);
+	}
 
 	Token name;
-	std::unique_ptr<Variable> superclass;
+	std::optional<Variable> superclass;
 	std::vector<Function> methods;
 };
 

@@ -44,7 +44,7 @@ struct ExprVisitor {
 };
 
 struct Expr {
-	virtual Object accept(ExprVisitor &visitor) = 0;
+	virtual Object accept(ExprVisitor &visitor) const = 0;
 	virtual ~Expr() = default;
 };
 
@@ -55,7 +55,7 @@ struct Assign : public Expr {
 	{
 	}
 
-	Object accept(ExprVisitor &visitor) override
+	Object accept(ExprVisitor &visitor) const override
 	{
 		return visitor.visit_assign_expr(*this);
 	}
@@ -72,7 +72,7 @@ struct Ternary : public Expr {
 	{
 	}
 
-	Object accept(ExprVisitor &visitor) override
+	Object accept(ExprVisitor &visitor) const override
 	{
 		return visitor.visit_ternary_expr(*this);
 	}
@@ -90,7 +90,7 @@ struct Logical : public Expr {
 	{
 	}
 
-	Object accept(ExprVisitor &visitor) override
+	Object accept(ExprVisitor &visitor) const override
 	{
 		return visitor.visit_logical_expr(*this);
 	}
@@ -108,7 +108,7 @@ struct Binary : public Expr {
 	{
 	}
 
-	Object accept(ExprVisitor &visitor) override
+	Object accept(ExprVisitor &visitor) const override
 	{
 		return visitor.visit_binary_expr(*this);
 	}
@@ -126,7 +126,7 @@ struct Call : public Expr {
 	{
 	}
 
-	Object accept(ExprVisitor &visitor)
+	Object accept(ExprVisitor &visitor) const override
 	{
 		return visitor.visit_call_expr(*this);
 	}
@@ -143,7 +143,7 @@ struct Get : public Expr {
 	{
 	}
 
-	Object accept(ExprVisitor &visitor) override
+	Object accept(ExprVisitor &visitor) const override
 	{
 		return visitor.visit_get_expr(*this);
 	}
@@ -160,7 +160,7 @@ struct Set : public Expr {
 	{
 	}
 
-	Object accept(ExprVisitor &visitor) override
+	Object accept(ExprVisitor &visitor) const override
 	{
 		return visitor.visit_set_expr(*this);
 	}
@@ -177,7 +177,7 @@ struct Super : public Expr {
 	{
 	}
 
-	Object accept(ExprVisitor &visitor) override
+	Object accept(ExprVisitor &visitor) const override
 	{
 		return visitor.visit_super_expr(*this);
 	}
@@ -192,7 +192,7 @@ struct This : public Expr {
 	{
 	}
 
-	Object accept(ExprVisitor &visitor) override
+	Object accept(ExprVisitor &visitor) const override
 	{
 		return visitor.visit_this_expr(*this);
 	}
@@ -206,7 +206,7 @@ struct Grouping : public Expr {
 	{
 	}
 
-	Object accept(ExprVisitor &visitor) override
+	Object accept(ExprVisitor &visitor) const override
 	{
 		return visitor.visit_grouping_expr(*this);
 	}
@@ -220,7 +220,7 @@ struct Literal : public Expr {
 	{
 	}
 
-	Object accept(ExprVisitor &visitor) override
+	Object accept(ExprVisitor &visitor) const override
 	{
 		return visitor.visit_literal_expr(*this);
 	}
@@ -235,7 +235,7 @@ struct Unary : public Expr {
 	{
 	}
 
-	Object accept(ExprVisitor &visitor) override
+	Object accept(ExprVisitor &visitor) const override
 	{
 		return visitor.visit_unary_expr(*this);
 	}
@@ -250,7 +250,7 @@ struct Variable : public Expr {
 	{
 	}
 
-	Object accept(ExprVisitor &visitor) override
+	Object accept(ExprVisitor &visitor) const override
 	{
 		return visitor.visit_variable_expr(*this);
 	}

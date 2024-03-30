@@ -77,9 +77,9 @@ private:
 		}
 	}
 
-	inline void execute(Stmt &stmt) { stmt.accept(*this); }
+	inline void execute(const Stmt &stmt) { stmt.accept(*this); }
 
-	inline Object evaluate(Expr &expr) { return expr.accept(*this); }
+	inline Object evaluate(const Expr &expr) { return expr.accept(*this); }
 
 	void execute_block(
 		const std::vector<StmtPtr> &statements, EnvironmentPtr &&block_environ
