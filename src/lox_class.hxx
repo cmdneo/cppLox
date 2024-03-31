@@ -56,8 +56,9 @@ public:
 	Object
 	call(Interpreter &interpreter, std::vector<Object> &arguments) override;
 
-	// Instance needs to keep a reference to the Class pointer, therefore,
+	// Instance needs to keep a reference to the Class, therefore,
 	// store a weak_ptr to itself which will be used by the instance
+	// It is set after creating the class ptr.
 	std::weak_ptr<LoxClass> self_ptr;
 	std::string name;
 

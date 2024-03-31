@@ -2,7 +2,6 @@
 #define GARBAGE_HXX_INCLUDED
 
 #include <cassert>
-#include <chrono>
 #include <initializer_list>
 #include <map>
 #include <memory>
@@ -14,8 +13,6 @@
 #include "lox_function.hxx"
 #include "lox_instance.hxx"
 #include "environment.hxx"
-
-static constexpr std::chrono::milliseconds GC_RUN_INTERVAL{100};
 
 class GarbageCollector
 {
@@ -53,10 +50,9 @@ private:
 		for (auto &env : directly_reachable)
 			mark_reachable(env);
 
-		auto swap_remove = [](auto &vec, unsigned remove_at,
-							  unsigned swap_with) {
+		auto swap_remove = [](auto &vec, unsigned remove_at) {
 			using std::swap;
-			swap(vec[remove_at], vec[swap_with]);
+			swap(vec[remove_at], vec[vec.size() - 1]);
 			vec.pop_back();
 		};
 
@@ -65,16 +61,16 @@ private:
 		for (int i = 0; i < length;) {
 			if (environments[i].expired()) {
 				length -= 1;
-				swap_remove(environments, i, length);
+				swap_remove(environments, i);
 			} else if (auto locked = environments[i].lock();
 					   !locked->reachable) {
 				length -= 1;
 				locked->values.clear();
-				swap_remove(environments, i, length);
+				swap_remove(environments, i);
 			} else {
 				// Only move to next if current one was not removed
 				// as when removed it is substituted with the last entry.
-				// So we would like to visit that substituted entry too.
+				// And we need to visit that substituted entry too.
 				++i;
 			}
 		}
@@ -87,6 +83,7 @@ private:
 	void mark_reachable(const std::weak_ptr<Environment> &environment)
 	{
 		// The environments containing 'this' and 'super' are not tracked here
+		// because they
 		// Indirectly reachable environments are also always valid,
 		// so no need to check before locking
 		auto env = environment.lock();
@@ -128,10 +125,6 @@ private:
 	// they are direclty reachable because they can be found via
 	// traversing the environment chain upwards and they are always valid.
 	std::vector<std::weak_ptr<Environment>> directly_reachable;
-
-	using clock = std::chrono::steady_clock;
-	// Last time the GC was run
-	clock::time_point last_run_at = clock::now();
 };
 
 #endif

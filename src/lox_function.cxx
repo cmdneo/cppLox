@@ -36,7 +36,7 @@ LoxFunctionPtr LoxFunction::bind(LoxInstancePtr instance)
 	// and bind 'this' to the instance passed
 	environment->define("this", std::move(instance));
 
-	return std::make_unique<LoxFunction>(
+	return std::make_shared<LoxFunction>(
 		declaration, std::move(environment), is_initializer
 	);
 }
