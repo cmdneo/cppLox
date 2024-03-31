@@ -51,7 +51,7 @@ public:
 		declare(stmt.name);
 		define(stmt.name);
 
-		if (stmt.superclass != nullptr
+		if (stmt.superclass
 			&& stmt.name.lexeme == stmt.superclass->name.lexeme) {
 			print_error(
 				stmt.superclass->name, "A class can't inherit from itself."
@@ -59,7 +59,7 @@ public:
 		}
 
 		// Put the 'super' in a new scope enclosing the scope of all methods
-		if (stmt.superclass != nullptr) {
+		if (stmt.superclass) {
 			current_class = ClassType::Subclass;
 			resolve(*stmt.superclass);
 			begin_scope();
@@ -81,7 +81,7 @@ public:
 		end_scope(); // End scope of 'this'
 
 		// End scope of 'super'
-		if (stmt.superclass != nullptr)
+		if (stmt.superclass)
 			end_scope();
 
 		current_class = enclosing_class;

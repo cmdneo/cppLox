@@ -5,6 +5,7 @@
 #include <utility>
 #include <string_view>
 #include <typeinfo>
+#include <optional>
 #include <initializer_list>
 
 #include "token.hxx"
@@ -80,10 +81,10 @@ StmtPtr Parser::class_declaration()
 {
 	auto name = consume(IDENTIFIER, "Expect class name.");
 
-	std::unique_ptr<Variable> superclass = nullptr;
+	std::optional<Variable> superclass{};
 	if (match({LESS})) {
 		consume(IDENTIFIER, "Expect superclass name.");
-		superclass = make_unique<Variable>(previous());
+		superclass.emplace(Variable(previous()));
 	}
 
 	consume(LEFT_BRACE, "Expect '{' before class body.");
