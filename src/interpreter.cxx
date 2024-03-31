@@ -10,16 +10,16 @@
 #include "runtime_error.hxx"
 #include "token_type.hxx"
 #include "token.hxx"
-#include "object.hxx"
 #include "expr.hxx"
 #include "stmt.hxx"
 #include "environment.hxx"
 #include "interpreter.hxx"
-#include "native.hxx"
-#include "lox_callable.hxx"
-#include "lox_function.hxx"
-#include "lox_class.hxx"
-#include "lox_instance.hxx"
+#include "object/object.hxx"
+#include "object/native.hxx"
+#include "object/lox_callable.hxx"
+#include "object/lox_function.hxx"
+#include "object/lox_class.hxx"
+#include "object/lox_instance.hxx"
 
 using enum TokenType;
 using std::get;
@@ -130,7 +130,7 @@ void Interpreter::visit_return_stmt(const Return &stmt)
 
 void Interpreter::visit_expr_stmt(const Expression &stmt)
 {
-	last_expr_result = evaluate(*stmt.expression);
+	evaluate(*stmt.expression);
 }
 
 void Interpreter::visit_block_stmt(const Block &stmt)
@@ -179,7 +179,6 @@ void Interpreter::visit_class_stmt(const Class &stmt)
 	// If a superclass name exists and it is an Object of type LoxClass
 	LoxClassPtr superclass = nullptr;
 	if (stmt.superclass) {
-		// Using const-cast is OK since evaluate
 		auto maybe_class = evaluate(*stmt.superclass);
 		if (match_types<LoxClassPtr>(maybe_class)) {
 			superclass = get<LoxClassPtr>(maybe_class);

@@ -8,8 +8,8 @@
 #include <string>
 
 #include "runtime_error.hxx"
-#include "object.hxx"
 #include "token.hxx"
+#include "object/object.hxx"
 
 class Environment;
 using EnvironmentPtr = std::shared_ptr<Environment>;

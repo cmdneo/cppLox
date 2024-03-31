@@ -9,7 +9,8 @@ add_compile_options(-Wall -Wextra -Wnull-dereference -Wshadow -Wformat=2 -pedant
 add_compile_options("$<$<CONFIG:Debug>:-fsanitize=address,undefined>")
 add_link_options("$<$<CONFIG:Debug>:-fsanitize=address,undefined>")
 
-include_directories("${CMAKE_SOURCE_DIR}/include")
+include_directories("${CMAKE_SOURCE_DIR}/src/")
+
 add_executable(
 	lox
 	"src/lox.cxx"
@@ -17,9 +18,9 @@ add_executable(
 	"src/scanner.cxx"
 	"src/parser.cxx"
 	"src/resolver.cxx"
-	"src/object.cxx"
-	"src/native.cxx"
-	"src/lox_function.cxx"
-	"src/lox_class.cxx"
+	"src/object/object.cxx"
+	"src/object/native.cxx"
+	"src/object/lox_function.cxx"
+	"src/object/lox_class.cxx"
 	"src/interpreter.cxx"
 )

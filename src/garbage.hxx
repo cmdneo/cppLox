@@ -9,10 +9,10 @@
 #include <variant>
 #include <utility>
 
-#include "object.hxx"
-#include "lox_function.hxx"
-#include "lox_instance.hxx"
 #include "environment.hxx"
+#include "object/object.hxx"
+#include "object/lox_function.hxx"
+#include "object/lox_instance.hxx"
 
 class GarbageCollector
 {

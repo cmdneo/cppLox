@@ -7,10 +7,10 @@
 #include <string_view>
 #include <vector>
 
-#include "object.hxx"
 #include "token.hxx"
 #include "token_type.hxx"
 #include "error.hxx"
+#include "object/object.hxx"
 
 class Scanner
 {

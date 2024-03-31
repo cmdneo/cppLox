@@ -6,8 +6,8 @@
 #include <variant>
 #include <vector>
 
-#include "object.hxx"
 #include "token.hxx"
+#include "object/object.hxx"
 
 struct Expr;
 struct Assign;

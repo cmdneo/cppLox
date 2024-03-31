@@ -4,9 +4,9 @@
 #include <vector>
 #include <string>
 
-#include "object.hxx"
 #include "scanner.hxx"
 #include "token_type.hxx"
+#include "object/object.hxx"
 
 using enum TokenType;
 

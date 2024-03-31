@@ -5,8 +5,8 @@
 #include <string>
 #include <variant>
 
-#include "object.hxx"
 #include "expr.hxx"
+#include "object/object.hxx"
 
 struct AstPrinter : public ExprVisitor {
 	inline std::string print(Expr &expr)

@@ -3,7 +3,7 @@
 
 #include <string>
 
-#include "object.hxx"
+#include "object/object.hxx"
 #include "token_type.hxx"
 
 struct Token {

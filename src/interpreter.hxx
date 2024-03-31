@@ -9,11 +9,11 @@
 
 #include "error.hxx"
 #include "runtime_error.hxx"
-#include "object.hxx"
 #include "expr.hxx"
 #include "stmt.hxx"
 #include "environment.hxx"
 #include "garbage.hxx"
+#include "object/object.hxx"
 
 class Interpreter : private ExprVisitor, private StmtVisitor
 {
