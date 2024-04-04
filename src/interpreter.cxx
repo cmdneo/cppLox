@@ -190,22 +190,23 @@ void Interpreter::visit_class_stmt(const Class &stmt)
 	}
 
 	// The enclosing environment in which 'super' is defined always remains
-	// the same because it only used to access methods and methods remain the
-	// same for every instance of a class, unlike instance's data-fields.
+	// the same because it is only used to access methods and methods remain
+	// the same for every instance of a class, unlike data-fields.
 	if (stmt.superclass) {
 		environment = make_shared<Environment>(environment);
 		environment->define("super", superclass);
 	}
 
-	// A new enclosing environment is created and 'this' is defined in that
-	// and bound to the method of the instance we access. We do this because
-	// instances do not share data, so they need their own environment.
+	// We do not create any environment containing 'this' here.
+	// A new environment is created and 'this' is defined in that everytime
+	// we access any method via an instance . This ensures that every method
+	// refers to the instance it was derived/accessed from.
 	ClassMethodMap methods;
 	for (auto &method : stmt.methods) {
 		bool is_init = method.name.lexeme == "init";
 		methods.insert({
 			method.name.lexeme,
-			make_unique<LoxFunction>(method, environment, is_init),
+			make_shared<LoxFunction>(method, environment, is_init),
 		});
 	}
 
@@ -420,7 +421,7 @@ Object Interpreter::visit_assign_expr(const Assign &expr)
 }
 
 void Interpreter::execute_block(
-	const std::vector<StmtPtr> &statements, EnvironmentPtr &&block_environ
+	const std::vector<StmtPtr> &statements, EnvironmentPtr block_environ
 )
 {
 	auto previous = std::move(environment);

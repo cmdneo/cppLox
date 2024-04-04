@@ -18,6 +18,7 @@ add_executable(
 	"src/scanner.cxx"
 	"src/parser.cxx"
 	"src/resolver.cxx"
+	"src/garbage.cxx"
 	"src/object/object.cxx"
 	"src/object/native.cxx"
 	"src/object/lox_function.cxx"

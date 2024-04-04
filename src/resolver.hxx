@@ -311,8 +311,13 @@ private:
 
 	void resolve_local(const Expr &expr, const Token &name);
 
+	// Store variables present in a socpe and along with info
+	// if they are defined(true) or just declared(false) yet.
+	// Each vector element represents a scope. The last element represents
+	// the current innermost scope.
 	std::vector<std::map<const std::string, bool>> scopes;
 	Interpreter &interpreter;
+
 	// Keeps track of if we are inside a class/function/loop
 	ClassType current_class = ClassType::None;
 	FunctionType current_function = FunctionType::None;

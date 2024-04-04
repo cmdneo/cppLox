@@ -17,11 +17,13 @@
 
 class Interpreter : private ExprVisitor, private StmtVisitor
 {
-	friend class LoxFunction;
+	friend class LoxFunction; // execute_block and ControlReturn.
 
 public:
 	Interpreter();
 	void interpret(std::vector<StmtPtr> statements);
+
+	/// Puts info in name resolution side table for locals. For Resolver.
 	void resolve(const Expr &expr, int depth) { locals[&expr] = depth; }
 
 	void visit_assert_stmt(const Assert &stmt) override;
@@ -51,9 +53,6 @@ public:
 	Object visit_variable_expr(const Variable &expr) override;
 	Object visit_assign_expr(const Assign &expr) override;
 
-	// Stores the result of the last expression statement executed
-	Object last_expr_result;
-
 private:
 	// Control-flow exceptions.
 	// We use the already available C++ exception mechanism to
@@ -81,12 +80,31 @@ private:
 
 	inline Object evaluate(const Expr &expr) { return expr.accept(*this); }
 
+	/// Execute a statement block with the provided environment.
 	void execute_block(
-		const std::vector<StmtPtr> &statements, EnvironmentPtr &&block_environ
+		const std::vector<StmtPtr> &statements, EnvironmentPtr block_environ
 	);
 
 	EnvironmentPtr globals = std::make_shared<Environment>();
 	EnvironmentPtr environment = globals;
+
+	// Name resolution Side Table.
+	// Sotres static name resolution information for local variables to
+	// prevent dynamic scope leak in case of closures.
+	// For example:
+	// var k2 = 42;
+	// {
+	//      var k1 = 10;
+	//      fun clos() {
+	//           print k1 + k2;
+	//      }
+	//      var k2 = 20;
+	// }
+	// Here clos should resolve k2 as the one having value 42,
+	// not the one having value 20.
+	//
+	// The information stores is pointer representing the variable and its
+	// scope distance from current use point to its closest defnition.
 	std::map<const Expr *, int> locals;
 	GarbageCollector garbage_collector{globals};
 };

@@ -310,7 +310,7 @@ ExprPtr Parser::assignment()
 			auto name = dynamic_cast<Variable &>(*expr).name;
 			return make_unique<Assign>(name, std::move(value));
 		}
-		// If Set(like: object.name) then transform it into a Get,
+		// If Get(like: object.name) then transform it into a Set,
 		// where the rightmost part(name) is the property to be set.
 		else if (typeid(expr_ref) == typeid(Get)) {
 			auto &get = dynamic_cast<Get &>(*expr);
@@ -329,7 +329,7 @@ ExprPtr Parser::ternary()
 {
 	auto expr = logic_or();
 
-	while (match({QUESTION})) {
+	if (match({QUESTION})) {
 		auto true_expr = expression();
 		consume(COLON, "Expect colon in ternary expression.");
 		auto false_expr = ternary();

@@ -16,7 +16,7 @@ using EnvironmentPtr = std::shared_ptr<Environment>;
 
 class Environment
 {
-	friend class GarbageCollector;
+	friend class GarbageCollector; // values
 
 public:
 	Environment(EnvironmentPtr encolsing_env = nullptr)
