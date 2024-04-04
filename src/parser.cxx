@@ -245,21 +245,26 @@ StmtPtr Parser::for_statement()
 	if (!check(RIGHT_PAREN))
 		increment = expression();
 	consume(RIGHT_PAREN, "Expect ')' after for clauses.");
+
 	auto body = statement();
+	Expression *inc_ptr = nullptr;
 
 	// A 'for' loop is just a syntactic sugar for the while loop.
 	// The below two are equaivalent:
-	//	for (initializer; condition; increment) { body }
-	//	{ initializer; while (condition) { { body } increment; } }
+	//	for (initializer; condition; increment) body
+	//	{ initializer; while (condition) { body increment; } }
 	// So, convert the for loop to a while loop as per the above equivalence.
-	if (increment != nullptr)
-		body = make_block(
-			std::move(body), make_unique<Expression>(std::move(increment))
-		);
+	if (increment != nullptr) {
+		auto inc_stmt = make_unique<Expression>(std::move(increment));
+		inc_ptr = inc_stmt.get();
+		body = make_block(std::move(body), std::move(inc_stmt));
+	}
 
 	if (condition == nullptr)
 		condition = make_unique<Literal>(true);
-	body = make_unique<While>(std::move(condition), std::move(body));
+	// Increment clause is required to seperately for supporting
+	// continue statements in the 'for' loop.
+	body = make_unique<While>(std::move(condition), std::move(body), inc_ptr);
 
 	if (initializer != nullptr)
 		body = make_block(std::move(initializer), std::move(body));

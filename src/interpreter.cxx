@@ -148,6 +148,10 @@ void Interpreter::visit_if_stmt(const If &stmt)
 
 void Interpreter::visit_while_stmt(const While &stmt)
 {
+	// We need to execute the increment clause everytime.
+	auto old_update = for_update_clause;
+	for_update_clause = stmt.for_update;
+
 	while (is_truthy(evaluate(*stmt.condition))) {
 		try {
 			execute(*stmt.body);
@@ -155,8 +159,13 @@ void Interpreter::visit_while_stmt(const While &stmt)
 			break;
 		} catch (ControlContinue) {
 			continue;
+		} catch (ControlReturn r) {
+			for_update_clause = old_update;
+			throw r;
 		}
 	}
+
+	for_update_clause = old_update;
 }
 
 void Interpreter::visit_var_stmt(const Var &stmt)
@@ -440,6 +449,8 @@ void Interpreter::execute_block(
 		environment = std::move(previous);
 	};
 
+	// for (var i = 0; i < 100; i = i + 1) { print i; continue; }
+
 	// Tell the garbage collector that the current environment is directly reachable
 	garbage_collector.push_environment(block_environ);
 
@@ -458,6 +469,13 @@ void Interpreter::execute_block(
 		restore_environment();
 		throw err;
 	} catch (ControlContinue err) {
+		// A continue will cause the for_update_clause to not be executed.
+		// Execute it only if it is present in the current block being
+		// executed, that is in the body of the while loop like so:
+		//	while (condition) { body increment; }
+		if (!statements.empty() && statements.back().get() == for_update_clause)
+			execute(*for_update_clause);
+
 		restore_environment();
 		throw err;
 	} catch (ControlReturn err) {

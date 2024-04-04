@@ -81,9 +81,16 @@ private:
 	inline Object evaluate(const Expr &expr) { return expr.accept(*this); }
 
 	/// Execute a statement block with the provided environment.
+	/// @param statements List of statements
+	/// @param block_environ The environment for it
 	void execute_block(
 		const std::vector<StmtPtr> &statements, EnvironmentPtr block_environ
 	);
+
+	/// Update expression to be run after ControlContinue, added for
+	/// supporting continue statements inside for loop, so that the update
+	/// gets executed at the end even if a ControlContinue happens.
+	Expression *for_update_clause = nullptr;
 
 	EnvironmentPtr globals = std::make_shared<Environment>();
 	EnvironmentPtr environment = globals;
