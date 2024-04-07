@@ -176,10 +176,10 @@ struct If : public Stmt {
 };
 
 struct While : public Stmt {
-	While(ExprPtr condition_, StmtPtr body_, Expression *for_update_ = nullptr)
+	While(ExprPtr condition_, StmtPtr body_, ExprPtr for_update_ = nullptr)
 		: condition(std::move(condition_))
 		, body(std::move(body_))
-		, for_update(for_update_)
+		, for_update(std::move(for_update_))
 	{
 	}
 
@@ -190,9 +190,9 @@ struct While : public Stmt {
 
 	ExprPtr condition;
 	StmtPtr body;
-	// Update clause for the 'for' loop.
-	// It is also always present somewhere in the above body field.
-	Expression *for_update;
+	// Update clause for the 'for' loop, execute it after
+	// body finishes or we see a 'continue' statement.
+	ExprPtr for_update;
 };
 
 struct Var : public Stmt {

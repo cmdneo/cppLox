@@ -87,11 +87,6 @@ private:
 		const std::vector<StmtPtr> &statements, EnvironmentPtr block_environ
 	);
 
-	/// Update expression to be run after ControlContinue, added for
-	/// supporting continue statements inside for loop, so that the update
-	/// gets executed at the end even if a ControlContinue happens.
-	Expression *for_update_clause = nullptr;
-
 	EnvironmentPtr globals = std::make_shared<Environment>();
 	EnvironmentPtr environment = globals;
 

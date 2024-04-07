@@ -127,10 +127,14 @@ public:
 	void visit_while_stmt(const While &stmt) override
 	{
 		resolve(*stmt.condition);
+		if (stmt.for_update)
+			resolve(*stmt.for_update);
 
 		auto enclosing_loop = current_loop;
 		current_loop = LoopType::While;
+
 		resolve(*stmt.body);
+
 		current_loop = enclosing_loop;
 	}
 
